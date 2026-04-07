@@ -12,6 +12,11 @@ Rails（API） + Next.js + GraphQL構成。
 - Rails・GraphQL学習中なので、なぜそのコマンド・コードを書くかを都度説明する
 - 各Chapterの冒頭で🎯目的・📚学ぶこと・🔑概念解説を示してから実装に入る
 
+## 進捗管理ルール
+- Chapterが完了したら、Claude Codeが進捗（CLAUDE.md）を更新する
+- 更新前に「Chapter X-X を完了にしてよいですか？」と確認を取る
+- 更新後、「コミットしてよいですか？」と確認を取り、OKならコミットまで行う
+
 ## Claude Codeの行動ルール（最重要）
 - コマンドの実行・ファイルの作成・編集は**絶対に自分でやらない**
 - やることは「次に何をするか」「なぜそうするか」を説明することだけ
@@ -40,8 +45,8 @@ Rails（API） + Next.js + GraphQL構成。
 ## 現在の進捗
 ### Part 0: 環境構築・設計
 - [x] Chapter 0-1: プロジェクトのセットアップ
-- [ ] Chapter 0-2: Gitの初期設定とGitHub連携
-- [ ] Chapter 0-3: Claude Codeの設定（MCP・Skills）
+- [x] Chapter 0-2: Gitの初期設定とGitHub連携
+- [x] Chapter 0-3: Claude Codeの設定（MCP・Skills）
 
 ### Part 1: Railsの基礎（モデル・REST API）
 - [ ] Chapter 1-1: データベース設計とマイグレーション
