@@ -1,0 +1,13 @@
+{
+  "name": "kakeibo",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "echo 'Rails API: cd apps/api && rails server'"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}
