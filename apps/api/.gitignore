@@ -31,3 +31,6 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
+# Rails secrets
+apps/api/config/master.key                                      
+apps/api/config/credentials/*.key
