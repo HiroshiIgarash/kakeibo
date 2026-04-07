@@ -40,9 +40,9 @@ group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
   gem "rspec-rails"
-  
+
   gem "dotenv-rails", "~> 3.2"
-  
+
   # Audits gems for known security defects (use config/bundler-audit.yml to ignore issues)
   gem "bundler-audit", require: false
 
@@ -52,5 +52,8 @@ group :development, :test do
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 
-end
+  gem "ruby-lsp", require: false
 
+  gem "shoulda-matchers", "~> 6.0"
+  gem "factory_bot_rails"
+end

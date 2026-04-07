@@ -1,0 +1,2 @@
+class VariableCategory < Category
+end

@@ -1,0 +1,2 @@
+class FixedCategory < Category
+end
