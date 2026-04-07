@@ -49,7 +49,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 0-3: Claude Codeの設定（MCP・Skills）
 
 ### Part 1: Railsの基礎（モデル・REST API）
-- [ ] Chapter 1-1: データベース設計とマイグレーション
+- [x] Chapter 1-1: データベース設計とマイグレーション
 - [ ] Chapter 1-2: Categoryモデル ― STIと階層構造
 - [ ] Chapter 1-3: Transactionモデル ― enumrize・Scope・カスタムバリデータ
 - [ ] Chapter 1-4: その他モデルの実装
