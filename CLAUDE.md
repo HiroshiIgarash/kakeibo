@@ -7,6 +7,7 @@ Rails（API） + Next.js + GraphQL構成。
 
 ## 開発ルール
 - TDDで進める（テストを先に書いてRedを確認 → 実装 → Green）
+  - **必ずFactory → spec → 実装の順番を守る。実装を先に書いてはいけない**
 - コマンドは1つずつ提示して、私が実行してから次に進む
 - コードを見せる前に必ず概念の説明を入れる
 - Rails・GraphQL学習中なので、なぜそのコマンド・コードを書くかを都度説明する
@@ -51,7 +52,7 @@ Rails（API） + Next.js + GraphQL構成。
 ### Part 1: Railsの基礎（モデル・REST API）
 - [x] Chapter 1-1: データベース設計とマイグレーション
 - [x] Chapter 1-2: Categoryモデル ― STIと階層構造
-- [ ] Chapter 1-3: Transactionモデル ― enumrize・Scope・カスタムバリデータ
+- [x] Chapter 1-3: Transactionモデル ― enumrize・Scope・カスタムバリデータ
 - [ ] Chapter 1-4: その他モデルの実装
 - [ ] Chapter 1-5: 通知モデル ― ポリモーフィック関連
 - [ ] Chapter 1-6: ショートカット連携API（REST）
