@@ -2,6 +2,7 @@ class Transaction < ApplicationRecord
   extend Enumerize
 
   belongs_to :category, optional: true
+  has_one :budget, through: :category
 
   enumerize :source, in: %i[shortcut manual], default: :shortcut
 

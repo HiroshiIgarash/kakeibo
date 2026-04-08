@@ -1,7 +1,12 @@
 class Category < ApplicationRecord
+  include Summarizable
+
   belongs_to :parent, class_name: "Category", optional: true
   has_many :children, class_name: "Category", foreign_key: :parent_id, dependent: :destroy
   has_many :transactions
+  has_many :budgets
+  has_many :alert_settings
+  has_many :store_category_mappings
 
   validates :name, presence: true
   validates :type, presence: true
