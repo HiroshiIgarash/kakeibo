@@ -12,5 +12,9 @@ module Types
     field :source,       Types::TransactionSourceType, null: false, description: "入力元"
     field :category,     Types::CategoryType,          null: true,  description: "カテゴリ"
     field :category_id,  ID,                           null: true,  description: "カテゴリID"
+
+    def category
+      dataloader.with(Dataloaders::RecordById, Category).load(object.category_id)
+    end
   end
 end

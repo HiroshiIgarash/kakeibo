@@ -63,7 +63,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 2-2: InterfaceとBaseクラスの設計
 - [x] Chapter 2-3: EnumとCustom Scalarの実装
 - [x] Chapter 2-4: TypeクラスとInput Objectの実装
-- [ ] Chapter 2-5: Dataloaderの実装 ― N+1問題を解決する
+- [x] Chapter 2-5: Dataloaderの実装 ― N+1問題を解決する
 
 ### Part 3: GraphQL Query実装
 - [ ] Chapter 3-1: シンプルなQueryの実装

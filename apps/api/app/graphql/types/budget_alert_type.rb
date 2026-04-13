@@ -9,5 +9,9 @@ module Types
     field :threshold,     Integer,             null: false, description: "アラート閾値（%）"
     field :category,      Types::CategoryType, null: false, description: "カテゴリ"
     field :category_id,   ID,                  null: false, description: "カテゴリID"
+
+    def category
+      dataloader.with(Dataloaders::RecordById, Category).load(object.category_id)
+    end
   end
 end
