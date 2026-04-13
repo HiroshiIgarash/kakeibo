@@ -18,9 +18,11 @@ class ApiSchema < GraphQL::Schema
 
   # Union and Interface Resolution
   def self.resolve_type(abstract_type, obj, ctx)
+    type_name = obj.class.name.demodulize
+    type_class = "Types::#{type_name}Type".safe_constantize
     # TODO: Implement this method
     # to return the correct GraphQL object type for `obj`
-    raise(GraphQL::RequiredImplementationMissingError)
+    raise(GraphQL::RequiredImplementationMissingError) unless type_class
   end
 
   # Limit the size of incoming queries:
