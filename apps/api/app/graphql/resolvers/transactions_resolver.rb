@@ -2,7 +2,7 @@
 
 module Resolvers
   class TransactionsResolver < Resolvers::BaseResolver
-    type [ Types::TransactionType ], null: false
+    type Types::TransactionConnectionType, null: false
 
     argument :year,        Integer, required: false, description: "絞り込む年"
     argument :month,       Integer, required: false, description: "絞り込む月"
