@@ -12,6 +12,7 @@ Rails（API） + Next.js + GraphQL構成。
 - コードを見せる前に必ず概念の説明を入れる
 - Rails・GraphQL学習中なので、なぜそのコマンド・コードを書くかを都度説明する
 - 各Chapterの冒頭で🎯目的・📚学ぶこと・🔑概念解説を示してから実装に入る
+- 各Chapterの末尾に✅まとめを示す（📌やったこと・🔑学んだ概念・🔗前後のつながり）
 
 ## 進捗管理ルール
 - Chapterが完了したら、Claude Codeが進捗（CLAUDE.md）を更新する
@@ -61,7 +62,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 2-1: graphql-rubyのセットアップとSchema設計
 - [x] Chapter 2-2: InterfaceとBaseクラスの設計
 - [x] Chapter 2-3: EnumとCustom Scalarの実装
-- [ ] Chapter 2-4: TypeクラスとInput Objectの実装
+- [x] Chapter 2-4: TypeクラスとInput Objectの実装
 - [ ] Chapter 2-5: Dataloaderの実装 ― N+1問題を解決する
 
 ### Part 3: GraphQL Query実装
