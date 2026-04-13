@@ -66,7 +66,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 2-5: Dataloaderの実装 ― N+1問題を解決する
 
 ### Part 3: GraphQL Query実装
-- [ ] Chapter 3-1: シンプルなQueryの実装
+- [x] Chapter 3-1: シンプルなQueryの実装
 - [ ] Chapter 3-2: Resolverを使った複雑なQuery ― transactions
 - [ ] Chapter 3-3: ConnectionによるPagination
 - [ ] Chapter 3-4: Serviceオブジェクトを使った集計Query

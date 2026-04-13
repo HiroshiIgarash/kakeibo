@@ -10,8 +10,8 @@ module Types
       context.schema.object_from_id(id, context)
     end
 
-    field :nodes, [Types::NodeType, null: true], null: true, description: "Fetches a list of objects given a list of IDs." do
-      argument :ids, [ID], required: true, description: "IDs of the objects."
+    field :nodes, [ Types::NodeType, null: true ], null: true, description: "Fetches a list of objects given a list of IDs." do
+      argument :ids, [ ID ], required: true, description: "IDs of the objects."
     end
 
     def nodes(ids:)
@@ -21,11 +21,21 @@ module Types
     # Add root-level fields here.
     # They will be entry points for queries on your schema.
 
-    # TODO: remove me
-    field :test_field, String, null: false,
-      description: "An example field added by the generator"
-    def test_field
-      "Hello World!"
+    field :categories, [ Types::CategoryType ], null: false, description: "全カテゴリ一覧"
+    def categories
+      Category.all
+    end
+
+    field :category, Types::CategoryType, null: true, description: "ID指定でカテゴリを1件取得" do
+      argument :id, ID, required: true
+    end
+    def category(id:)
+      Category.find_by(id: id)
+    end
+
+    field :budgets, [ Types::BudgetType ], null: false, description: "全予算一覧"
+    def budgets
+      Budget.all
     end
   end
 end
