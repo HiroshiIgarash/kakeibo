@@ -64,4 +64,45 @@ RSpec.describe Types::QueryType do
       expect(ids).to contain_exactly(budget.id.to_s)
     end
   end
+
+  describe "monthlySummary(year:, month:)" do
+    let(:category_food)  { create(:category, name: "食費") }
+    let(:category_daily) { create(:category, name: "日用品") }
+    let(:target_month)   { Date.new(2024, 1, 1) }
+
+    before do
+      create(:transaction, category: category_food,  amount: 5000, purchased_at: target_month + 1.day)
+      create(:transaction, category: category_daily, amount: 1000, purchased_at: target_month + 2.days)
+      create(:budget, category: category_food,  amount: 30_000, month: target_month)
+      create(:budget, category: category_daily, amount: 10_000, month: target_month)
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          monthlySummary(year: 2024, month: 1) {
+            totalAmount
+            budgetAmount
+            remainingAmount
+            categoryBreakdowns {
+              categoryId
+              categoryName
+              amount
+              percentage
+            }
+          }
+        }
+      GQL
+    end
+
+    it "月次集計を返す" do
+      result = ApiSchema.execute(query)
+      summary = result["data"]["monthlySummary"]
+
+      expect(summary["totalAmount"]).to eq 6000
+      expect(summary["budgetAmount"]).to eq 40_000
+      expect(summary["remainingAmount"]).to eq 34_000
+      expect(summary["categoryBreakdowns"].size).to eq 2
+    end
+  end
 end

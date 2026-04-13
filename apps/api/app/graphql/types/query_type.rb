@@ -39,5 +39,13 @@ module Types
     end
 
     field :transactions, resolver: Resolvers::TransactionsResolver, description: "取引一覧（フィルタ可）"
+
+    field :monthly_summary, Types::MonthlySummaryType, null: false, description: "月次支出集計" do
+      argument :year,  Integer, required: true
+      argument :month, Integer, required: true
+    end
+    def monthly_summary(year:, month:)
+      ::MonthlySummaryService.new(year: year, month: month).call
+    end
   end
 end
