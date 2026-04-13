@@ -75,7 +75,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 3-5: Union型を使った通知Query
 
 ### Part 4: GraphQL Mutation実装
-- [ ] Chapter 4-1: Transaction系Mutationの実装
+- [x] Chapter 4-1: Transaction系Mutationの実装
 - [ ] Chapter 4-2: Category・Budget系Mutationの実装
 - [ ] Chapter 4-3: 通知・マッピング系Mutationの実装
 - [ ] Chapter 4-4: Active Storage ― 写真添付Mutationの実装
