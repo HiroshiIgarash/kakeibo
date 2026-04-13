@@ -58,7 +58,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 1-6: ショートカット連携API（REST）
 
 ### Part 2: GraphQL基盤
-- [ ] Chapter 2-1: graphql-rubyのセットアップとSchema設計
+- [x] Chapter 2-1: graphql-rubyのセットアップとSchema設計
 - [ ] Chapter 2-2: InterfaceとBaseクラスの設計
 - [ ] Chapter 2-3: EnumとCustom Scalarの実装
 - [ ] Chapter 2-4: TypeクラスとInput Objectの実装
