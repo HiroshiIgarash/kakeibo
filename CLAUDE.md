@@ -67,7 +67,7 @@ Rails（API） + Next.js + GraphQL構成。
 
 ### Part 3: GraphQL Query実装
 - [x] Chapter 3-1: シンプルなQueryの実装
-- [ ] Chapter 3-2: Resolverを使った複雑なQuery ― transactions
+- [x] Chapter 3-2: Resolverを使った複雑なQuery ― transactions
 - [ ] Chapter 3-3: ConnectionによるPagination
 - [ ] Chapter 3-4: Serviceオブジェクトを使った集計Query
 - [ ] Chapter 3-5: Union型を使った通知Query

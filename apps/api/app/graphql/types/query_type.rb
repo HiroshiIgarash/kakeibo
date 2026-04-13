@@ -37,5 +37,7 @@ module Types
     def budgets
       Budget.all
     end
+
+    field :transactions, resolver: Resolvers::TransactionsResolver, description: "取引一覧（フィルタ可）"
   end
 end
