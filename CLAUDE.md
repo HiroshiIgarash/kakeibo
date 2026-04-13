@@ -55,7 +55,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 1-3: Transactionモデル ― enumrize・Scope・カスタムバリデータ
 - [x] Chapter 1-4: その他モデルの実装
 - [x] Chapter 1-5: 通知モデル ― ポリモーフィック関連
-- [ ] Chapter 1-6: ショートカット連携API（REST）
+- [x] Chapter 1-6: ショートカット連携API（REST）
 
 ### Part 2: GraphQL基盤
 - [ ] Chapter 2-1: graphql-rubyのセットアップとSchema設計
