@@ -105,4 +105,55 @@ RSpec.describe Types::QueryType do
       expect(summary["categoryBreakdowns"].size).to eq 2
     end
   end
+
+  describe "notifications" do
+    let(:query) do
+      <<~GQL
+      query {
+        notifications {
+          nodes {
+            id
+            readAt
+            notifiable {
+              ... on BudgetAlert {
+                usagePercent
+                threshold
+              }
+              ... on UnclassifiedAlert {
+                count
+              }
+            }
+          }
+        }
+      }
+    GQL
+    end
+
+    context "BudgetAlertの通知がある場合" do
+      let!(:budget_alert)  { create(:budget_alert) }
+      let!(:notification)  { create(:notification, notifiable: budget_alert) }
+
+      it "BudgetAlertの内容を返す" do
+        result = ApiSchema.execute(query)
+        node = result["data"]["notifications"]["nodes"].first
+
+        expect(node["id"]).to eq(notification.id.to_s)
+        expect(node["notifiable"]["usagePercent"]).to eq(budget_alert.usage_percent)
+        expect(node["notifiable"]["threshold"]).to eq(budget_alert.threshold)
+      end
+    end
+
+    context "UnclassifiedAlertの通知がある場合" do
+      let!(:unclassified_alert) { create(:unclassified_alert) }
+      let!(:notification)       { create(:notification, notifiable: unclassified_alert) }
+
+      it "UnclassifiedAlertの内容を返す" do
+        result = ApiSchema.execute(query)
+        node = result["data"]["notifications"]["nodes"].first
+
+        expect(node["id"]).to eq(notification.id.to_s)
+        expect(node["notifiable"]["count"]).to eq(unclassified_alert.count)
+      end
+    end
+  end
 end

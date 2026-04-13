@@ -47,5 +47,10 @@ module Types
     def monthly_summary(year:, month:)
       ::MonthlySummaryService.new(year: year, month: month).call
     end
+
+    field :notifications, Types::NotificationType.connection_type, null: false, description: "通知一覧"
+    def notifications
+      Notification.all.order(created_at: :desc)
+    end
   end
 end
