@@ -2,6 +2,10 @@
 
 class ApiSchema < GraphQL::Schema
   mutation(Types::MutationType)
+
+  # Custom Scalars
+  scalar(Scalars::DateType)
+
   query(Types::QueryType)
 
   # For batch-loading (see https://graphql-ruby.org/dataloader/overview.html)
