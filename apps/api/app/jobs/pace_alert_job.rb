@@ -3,31 +3,21 @@ class PaceAlertJob < ApplicationJob
 
   def perform
     today = Date.current
-    month = today.beginning_of_month
-    days_in_month = today.end_of_month.day
-    days_elapsed = today.day
-
-    ideal_rate = days_elapsed.to_f / days_in_month * 100
 
     PaceAlertSetting.active.each do |setting|
-      next if setting.active_from_day > days_elapsed
+      next if setting.active_from_day > today.day
 
       category = setting.category
-      budget = Budget.find_by(category: category, month: month)
-      next unless budget
+      result = BudgetPaceCalculator.new(category: category, date: today).call
+      next unless result
 
-      spent = Transaction.where(category: category)
-                         .where(purchased_at: month..today.end_of_day)
-                         .sum(:amount)
-
-      actual_rate = spent.to_f / budget.amount * 100
-      pace_rate = actual_rate / ideal_rate * 100
-
+      month = today.beginning_of_month
       last_alert = PaceAlert.where(category: category, month: month)
                             .order(triggered_at: :desc)
                             .first
 
-      if pace_rate >= setting.threshold
+      # pace_rate（小数）を整数%に換算してユーザー設定閾値と比較
+      if result[:pace_rate] * 100 >= setting.threshold
         next if last_alert&.recovered_at.nil? && last_alert.present?
 
         alert = PaceAlert.create!(
@@ -39,9 +29,9 @@ class PaceAlertJob < ApplicationJob
         ApiSchema.subscriptions.trigger("notificationCreated", {}, notification)
         PaceMailer.pace_exceeded(
           category: category,
-          budget: budget,
-          spent: spent,
-          pace_rate: pace_rate
+          budget:   Budget.find_by(category: category, month: month),
+          spent:    result[:spent],
+          pace_rate: result[:pace_rate] * 100
         ).deliver_later
       elsif last_alert&.recovered_at.nil? && last_alert.present?
         last_alert.update!(recovered_at: Time.current)
