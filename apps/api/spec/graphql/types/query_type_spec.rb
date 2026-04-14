@@ -23,6 +23,35 @@ RSpec.describe Types::QueryType do
       ids = result["data"]["categories"].map { |c| c["id"] }
       expect(ids).to contain_exactly(parent.id.to_s, child.id.to_s)
     end
+
+    context "childrenフィールドを含む場合" do
+      let(:query_with_children) do
+        <<~GQL
+          query {
+            categories {
+              id
+              name
+              children {
+                id
+                name
+              }
+            }
+          }
+        GQL
+      end
+
+      it "親カテゴリに子カテゴリが含まれる" do
+        result = ApiSchema.execute(query_with_children)
+        parent_data = result["data"]["categories"].find { |c| c["id"] == parent.id.to_s }
+        expect(parent_data["children"].map { |c| c["id"] }).to contain_exactly(child.id.to_s)
+      end
+
+      it "子カテゴリのchildrenは空配列" do
+        result = ApiSchema.execute(query_with_children)
+        child_data = result["data"]["categories"].find { |c| c["id"] == child.id.to_s }
+        expect(child_data["children"]).to be_empty
+      end
+    end
   end
 
   describe "category(id:)" do

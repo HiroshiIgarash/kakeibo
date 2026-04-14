@@ -12,9 +12,14 @@ module Types
     field :sort_order, Integer, null: false, description: "表示順"
     field :transactions_count, Integer, null: false, description: "紐づく取引件数"
     field :category_type, String, null: false, description: "カテゴリ種別（FixedCategory / VariableCategory）"
+    field :children, [ CategoryType ], null: false, description: "子カテゴリ一覧"
 
     def category_type
       object.type
+    end
+
+    def children
+      dataloader.with(Dataloaders::ChildrenByParentId).load(object.id)
     end
   end
 end
