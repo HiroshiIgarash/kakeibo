@@ -29,5 +29,8 @@ module Types
 
     field :update_store_mapping,
       mutation: Mutations::StoreMappings::UpdateStoreMapping
+
+    field :upsert_alert_setting,
+      mutation: Mutations::AlertSettings::UpsertAlertSetting
   end
 end

@@ -106,6 +106,41 @@ RSpec.describe Types::QueryType do
     end
   end
 
+  describe "alertSettings" do
+    let!(:budget_alert_setting) { create(:budget_alert_setting) }
+    let!(:pace_alert_setting)   { create(:pace_alert_setting) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          alertSettings {
+            budgetAlertSettings {
+              id
+              threshold
+              isActive
+            }
+            paceAlertSettings {
+              id
+              threshold
+              activeFromDay
+              isActive
+            }
+          }
+        }
+      GQL
+    end
+
+    it "全アラート設定を返す" do
+      result = ApiSchema.execute(query)
+      data = result["data"]["alertSettings"]
+
+      expect(data["budgetAlertSettings"].map { |s| s["id"] })
+        .to contain_exactly(budget_alert_setting.id.to_s)
+      expect(data["paceAlertSettings"].map { |s| s["id"] })
+        .to contain_exactly(pace_alert_setting.id.to_s)
+    end
+  end
+
   describe "notifications" do
     let(:query) do
       <<~GQL

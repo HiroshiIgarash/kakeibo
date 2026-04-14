@@ -48,6 +48,14 @@ module Types
       ::MonthlySummaryService.new(year: year, month: month).call
     end
 
+    field :alert_settings, Types::AlertSettingsType, null: false, description: "全アラート設定"
+    def alert_settings
+      ::Struct.new(:budget_alert_settings, :pace_alert_settings).new(
+        BudgetAlertSetting.all,
+        PaceAlertSetting.all
+      )
+    end
+
     field :notifications, Types::NotificationType.connection_type, null: false, description: "通知一覧"
     def notifications
       Notification.all.order(created_at: :desc)
