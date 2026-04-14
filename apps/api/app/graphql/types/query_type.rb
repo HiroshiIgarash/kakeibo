@@ -33,9 +33,18 @@ module Types
       Category.find_by(id: id)
     end
 
-    field :budgets, [ Types::BudgetType ], null: false, description: "全予算一覧"
-    def budgets
-      Budget.all
+    field :transaction, Types::TransactionType, null: true, description: "ID指定で取引を1件取得" do
+      argument :id, ID, required: true
+    end
+    def transaction(id:)
+      Transaction.find_by(id: id)
+    end
+
+    field :budgets, [ Types::BudgetType ], null: false, description: "予算一覧（月フィルタ可）" do
+      argument :month, Scalars::DateType, required: false, description: "対象月（省略時は全件）"
+    end
+    def budgets(month: nil)
+      month ? Budget.where(month: month) : Budget.all
     end
 
     field :transactions, resolver: Resolvers::TransactionsResolver, description: "取引一覧（フィルタ可）"
@@ -56,9 +65,12 @@ module Types
       )
     end
 
-    field :notifications, Types::NotificationType.connection_type, null: false, description: "通知一覧"
-    def notifications
-      Notification.all.order(created_at: :desc)
+    field :notifications, Types::NotificationType.connection_type, null: false, description: "通知一覧" do
+      argument :unread_only, Boolean, required: false, default_value: false, description: "未読のみ取得"
+    end
+    def notifications(unread_only: false)
+      scope = Notification.all.order(created_at: :desc)
+      unread_only ? scope.where(read_at: nil) : scope
     end
   end
 end

@@ -74,23 +74,77 @@ RSpec.describe Types::QueryType do
     end
   end
 
-  describe "budgets" do
-    let!(:budget) { create(:budget) }
+  describe "transaction(id:)" do
+    let!(:transaction) { create(:transaction) }
 
     let(:query) do
       <<~GQL
         query {
-          budgets {
+          transaction(id: "#{transaction.id}") {
             id
+            amount
+            storeName
           }
         }
       GQL
     end
 
-    it "全予算を返す" do
+    it "指定したIDの取引を返す" do
       result = ApiSchema.execute(query)
-      ids = result["data"]["budgets"].map { |b| b["id"] }
-      expect(ids).to contain_exactly(budget.id.to_s)
+      expect(result["data"]["transaction"]["id"]).to eq(transaction.id.to_s)
+    end
+
+    it "存在しないIDはnilを返す" do
+      query_missing = <<~GQL
+        query {
+          transaction(id: "0") {
+            id
+          }
+        }
+      GQL
+      result = ApiSchema.execute(query_missing)
+      expect(result["data"]["transaction"]).to be_nil
+    end
+  end
+
+  describe "budgets" do
+    let!(:budget_jan) { create(:budget, month: "2024-01-01") }
+    let!(:budget_feb) { create(:budget, month: "2024-02-01") }
+
+    context "monthフィルタなし" do
+      let(:query) do
+        <<~GQL
+          query {
+            budgets {
+              id
+            }
+          }
+        GQL
+      end
+
+      it "全予算を返す" do
+        result = ApiSchema.execute(query)
+        ids = result["data"]["budgets"].map { |b| b["id"] }
+        expect(ids).to contain_exactly(budget_jan.id.to_s, budget_feb.id.to_s)
+      end
+    end
+
+    context "monthフィルタあり" do
+      let(:query) do
+        <<~GQL
+          query {
+            budgets(month: "2024-01-01") {
+              id
+            }
+          }
+        GQL
+      end
+
+      it "指定した月の予算のみ返す" do
+        result = ApiSchema.execute(query)
+        ids = result["data"]["budgets"].map { |b| b["id"] }
+        expect(ids).to contain_exactly(budget_jan.id.to_s)
+      end
     end
   end
 
@@ -217,6 +271,30 @@ RSpec.describe Types::QueryType do
 
         expect(node["id"]).to eq(notification.id.to_s)
         expect(node["notifiable"]["count"]).to eq(unclassified_alert.count)
+      end
+    end
+
+    context "unreadOnly: trueの場合" do
+      let!(:budget_alert)     { create(:budget_alert) }
+      let!(:unread)           { create(:notification, notifiable: budget_alert, read_at: nil) }
+      let!(:read)             { create(:notification, notifiable: budget_alert, read_at: Time.current) }
+
+      let(:query_unread_only) do
+        <<~GQL
+          query {
+            notifications(unreadOnly: true) {
+              nodes {
+                id
+              }
+            }
+          }
+        GQL
+      end
+
+      it "未読通知のみ返す" do
+        result = ApiSchema.execute(query_unread_only)
+        ids = result["data"]["notifications"]["nodes"].map { |n| n["id"] }
+        expect(ids).to contain_exactly(unread.id.to_s)
       end
     end
   end
