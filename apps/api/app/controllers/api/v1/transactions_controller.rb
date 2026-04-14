@@ -1,6 +1,6 @@
 module Api
   module V1
-    class TransactionsController < ApplicationController
+    class TransactionsController < BaseController
       def create
         category = resolve_category(transaction_params[:store_name], transaction_params[:category_id])
         @transaction = Transaction.new(transaction_params.merge(category: category))
