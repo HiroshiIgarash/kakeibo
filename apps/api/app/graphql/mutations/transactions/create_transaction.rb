@@ -24,10 +24,7 @@ module Mutations
         )
 
         if transaction.save
-          BudgetCheckService.call(
-            category_id:  transaction.category_id,
-            purchased_at: transaction.purchased_at
-          )
+          BudgetAlertJob.perform_later(transaction.id)
           { transaction: transaction, errors: [] }
         else
           { transaction: nil, errors: transaction.errors.full_messages }

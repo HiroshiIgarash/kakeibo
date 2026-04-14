@@ -5,8 +5,8 @@ class Category < ApplicationRecord
   has_many :children, class_name: "Category", foreign_key: :parent_id, dependent: :destroy
   has_many :transactions
   has_many :budgets
-  has_many :budget_alert_settings
-  has_many :pace_alert_settings
+  has_one :budget_alert_setting
+  has_one :pace_alert_setting
   has_many :pace_alerts
   has_many :store_category_mappings
 
