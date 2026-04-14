@@ -78,7 +78,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 4-1: Transaction系Mutationの実装
 - [x] Chapter 4-2: Category・Budget系Mutationの実装
 - [x] Chapter 4-3: 通知・マッピング系Mutationの実装
-- [ ] Chapter 4-4: Active Storage ― 写真添付Mutationの実装
+- [x] Chapter 4-4: Active Storage ― 写真添付Mutationの実装
 
 ### Part 5: Rails応用機能
 - [ ] Chapter 5-1: Action Mailer ― 予算アラートメール

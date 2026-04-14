@@ -12,9 +12,15 @@ module Types
     field :source,       Types::TransactionSourceType, null: false, description: "入力元"
     field :category,     Types::CategoryType,          null: true,  description: "カテゴリ"
     field :category_id,  ID,                           null: true,  description: "カテゴリID"
+    field :photo_url,    String,                       null: true,  description: "写真URL"
 
     def category
       dataloader.with(Dataloaders::RecordById, Category).load(object.category_id)
+    end
+
+    def photo_url
+      return nil unless object.photo.attached?
+      Rails.application.routes.url_helpers.rails_blob_url(object.photo, only_path: true)
     end
   end
 end

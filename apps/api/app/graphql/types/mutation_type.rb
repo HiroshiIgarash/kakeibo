@@ -8,6 +8,8 @@ module Types
       mutation: Mutations::Transactions::UpdateTransaction
     field :delete_transaction,
       mutation: Mutations::Transactions::DeleteTransaction
+    field :attach_photo,
+      mutation: Mutations::Transactions::AttachPhoto
     field :create_category,
       mutation: Mutations::Categories::CreateCategory
     field :update_category,

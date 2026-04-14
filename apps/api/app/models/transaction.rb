@@ -3,6 +3,7 @@ class Transaction < ApplicationRecord
 
   belongs_to :category, optional: true
   has_one :budget, through: :category
+  has_one_attached :photo
 
   enumerize :source, in: %i[shortcut manual], default: :shortcut
 
