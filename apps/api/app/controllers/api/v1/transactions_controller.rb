@@ -6,6 +6,7 @@ module Api
         @transaction = Transaction.new(transaction_params.merge(category: category))
 
         if @transaction.save
+          UnclassifiedAlertJob.perform_later if category.nil?
           render json: @transaction, status: :created
         else
           render json: { errors: @transaction.errors.full_messages }, status: :unprocessable_entity

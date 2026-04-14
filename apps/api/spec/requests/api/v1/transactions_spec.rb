@@ -39,6 +39,16 @@ RSpec.describe "Api::V1::Transactions", type: :request do
       end
     end
 
+    context "店名がStoreCategoryMappingに一致せずcategoryがnilの場合" do
+      it "UnclassifiedAlertJobをエンキューする" do
+        expect {
+          post "/api/v1/transactions",
+               params: valid_params.deep_merge(transaction: { category_id: nil }),
+               as: :json
+        }.to have_enqueued_job(UnclassifiedAlertJob)
+      end
+    end
+
     context "無効なパラメータの場合" do
       it "422を返す" do
         post "/api/v1/transactions",

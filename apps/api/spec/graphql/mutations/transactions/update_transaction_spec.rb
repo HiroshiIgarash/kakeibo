@@ -47,6 +47,41 @@ RSpec.describe Mutations::Transactions::UpdateTransaction do
     end
   end
 
+  context "category_idを設定した場合" do
+    let(:category) { create(:category) }
+    let(:input) do
+      {
+        id:         transaction.id,
+        categoryId: category.id
+      }
+    end
+
+    it "BudgetAlertJobをエンキューする" do
+      expect { execute(input) }.to have_enqueued_job(BudgetAlertJob)
+    end
+
+    it "UnclassifiedAlertJobをエンキューする" do
+      expect { execute(input) }.to have_enqueued_job(UnclassifiedAlertJob)
+    end
+  end
+
+  context "category_idを設定しない場合" do
+    let(:input) do
+      {
+        id:     transaction.id,
+        amount: 2000
+      }
+    end
+
+    it "BudgetAlertJobをエンキューしない" do
+      expect { execute(input) }.not_to have_enqueued_job(BudgetAlertJob)
+    end
+
+    it "UnclassifiedAlertJobをエンキューしない" do
+      expect { execute(input) }.not_to have_enqueued_job(UnclassifiedAlertJob)
+    end
+  end
+
   context "異常系：存在しないIDの場合" do
     let(:input) { { id: "0", amount: 2000, storeName: "更新" } }
 

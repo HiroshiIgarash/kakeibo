@@ -23,6 +23,10 @@ module Mutations
         end
 
         if transaction.update(attrs.compact)
+          if attrs[:category_id].present?
+            BudgetAlertJob.perform_later(transaction.id)
+            UnclassifiedAlertJob.perform_later
+          end
           { transaction: transaction, errors: [] }
         else
           { transaction: nil, errors: transaction.errors.full_messages }

@@ -25,6 +25,7 @@ module Mutations
 
         if transaction.save
           BudgetAlertJob.perform_later(transaction.id)
+          UnclassifiedAlertJob.perform_later if category_id.nil?
           { transaction: transaction, errors: [] }
         else
           { transaction: nil, errors: transaction.errors.full_messages }
