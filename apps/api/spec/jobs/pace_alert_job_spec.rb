@@ -39,11 +39,23 @@ RSpec.describe PaceAlertJob, type: :job do
     context "ペースが閾値を超えた場合（初回）" do
       it "PaceAlertを作成してメールを送る" do
         travel_to Date.current.beginning_of_month + 10.days do
+          allow(ApiSchema.subscriptions).to receive(:trigger)
           # 10日時点の理想消費率 ≒ 33%、支出15,000円 = 実際50% → ペース率150% > 110%
           create(:transaction, category: category, amount: 15_000, purchased_at: Date.current)
           expect { described_class.perform_now }
             .to change(PaceAlert, :count).by(1)
+            .and change(Notification, :count).by(1)
             .and have_enqueued_mail(PaceMailer, :pace_exceeded)
+        end
+      end
+
+      it "subscriptionをトリガーする" do
+        travel_to Date.current.beginning_of_month + 10.days do
+          allow(ApiSchema.subscriptions).to receive(:trigger)
+          create(:transaction, category: category, amount: 15_000, purchased_at: Date.current)
+          described_class.perform_now
+          expect(ApiSchema.subscriptions).to have_received(:trigger)
+            .with("notificationCreated", {}, kind_of(Notification))
         end
       end
     end

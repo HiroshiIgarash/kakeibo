@@ -42,8 +42,22 @@ RSpec.describe BudgetAlertJob, type: :job do
     end
 
     context "使用率が閾値を超えた場合" do
+      before do
+        allow(ApiSchema.subscriptions).to receive(:trigger)
+      end
+
       it "BudgetAlertを1件作成する" do
         expect { described_class.perform_now(transaction.id) }.to change(BudgetAlert, :count).by(1)
+      end
+
+      it "Notificationを1件作成する" do
+        expect { described_class.perform_now(transaction.id) }.to change(Notification, :count).by(1)
+      end
+
+      it "subscriptionをトリガーする" do
+        described_class.perform_now(transaction.id)
+        expect(ApiSchema.subscriptions).to have_received(:trigger)
+          .with("notificationCreated", {}, kind_of(Notification))
       end
 
       it "メール送信ジョブをエンキューする" do
@@ -71,12 +85,19 @@ RSpec.describe BudgetAlertJob, type: :job do
     end
 
     context "threshold_2 も設定されている場合" do
-      before { alert_setting.update!(threshold_2: 100) }
+      before do
+        alert_setting.update!(threshold_2: 100)
+        allow(ApiSchema.subscriptions).to receive(:trigger)
+      end
 
       let(:transaction) { create(:transaction, category: category, amount: 10_500, purchased_at: Date.current) }
 
       it "BudgetAlertを2件作成する（threshold_1 と threshold_2 それぞれ）" do
         expect { described_class.perform_now(transaction.id) }.to change(BudgetAlert, :count).by(2)
+      end
+
+      it "Notificationを2件作成する" do
+        expect { described_class.perform_now(transaction.id) }.to change(Notification, :count).by(2)
       end
     end
   end

@@ -83,8 +83,8 @@ Rails（API） + Next.js + GraphQL構成。
 ### Part 5: Rails応用機能
 - [x] Chapter 5-1: Action Mailer ― 予算アラートメール
 - [x] Chapter 5-2: Active Job + Sidekiq ― 非同期処理
-- [ ] Chapter 5-3: Delegated Types ― ポリモーフィックのリファクタリング
-- [ ] Chapter 5-4: GraphQL Subscription + Action Cable
+- [~] Chapter 5-3: Delegated Types ― ポリモーフィックのリファクタリング（スキップ：現設計で十分なため）
+- [x] Chapter 5-4: GraphQL Subscription + Action Cable
 
 ### Part 6: フロントエンド（Next.js）
 - [ ] Chapter 6-1: GraphQLクライアントのセットアップ

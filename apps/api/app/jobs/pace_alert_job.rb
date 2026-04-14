@@ -30,11 +30,13 @@ class PaceAlertJob < ApplicationJob
       if pace_rate >= setting.threshold
         next if last_alert&.recovered_at.nil? && last_alert.present?
 
-        PaceAlert.create!(
+        alert = PaceAlert.create!(
           category: category,
           month: month,
           triggered_at: Time.current
         )
+        notification = alert.create_notification!
+        ApiSchema.subscriptions.trigger("notificationCreated", {}, notification)
         PaceMailer.pace_exceeded(
           category: category,
           budget: budget,

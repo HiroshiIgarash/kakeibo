@@ -30,12 +30,14 @@ class BudgetAlertJob < ApplicationJob
       )
       next if already_sent
 
-      BudgetAlert.create!(
+      alert = BudgetAlert.create!(
         category: category,
         month: month,
         threshold: threshold,
         usage_percent: usage_rate
       )
+      notification = alert.create_notification!
+      ApiSchema.subscriptions.trigger("notificationCreated", {}, notification)
       BudgetMailer.budget_exceeded(budget: budget, spent: spent).deliver_later
     end
   end
