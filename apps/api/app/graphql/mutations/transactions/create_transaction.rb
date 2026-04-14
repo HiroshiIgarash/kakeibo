@@ -24,6 +24,10 @@ module Mutations
         )
 
         if transaction.save
+          BudgetCheckService.call(
+            category_id:  transaction.category_id,
+            purchased_at: transaction.purchased_at
+          )
           { transaction: transaction, errors: [] }
         else
           { transaction: nil, errors: transaction.errors.full_messages }

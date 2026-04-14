@@ -1,0 +1,18 @@
+<h2>【予算超過のお知らせ】</h2>
+
+<p><strong><%= @category_name %></strong>の予算を超過しました。</p>
+
+<table>
+  <tr>
+    <td>予算上限</td>
+    <td><%= number_with_delimiter(@budget.amount) %> 円</td>
+  </tr>
+  <tr>
+    <td>現在の支出</td>
+    <td><%= number_with_delimiter(@spent) %> 円</td>
+  </tr>
+  <tr>
+    <td>超過額</td>
+    <td><%= number_with_delimiter(@spent - @budget.amount) %> 円</td>
+  </tr>
+</table>
