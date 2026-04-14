@@ -19,5 +19,13 @@ module Types
       mutation: Mutations::Budgets::UpsertBudget
     field :delete_budget,
       mutation: Mutations::Budgets::DeleteBudget
+
+    field :mark_notification_as_read,
+      mutation: Mutations::Notifications::MarkNotificationAsRead
+    field :mark_all_notifications_as_read,
+      mutation: Mutations::Notifications::MarkAllNotificationsAsRead
+
+    field :update_store_mapping,
+      mutation: Mutations::StoreMappings::UpdateStoreMapping
   end
 end
