@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_14_005448) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_14_015810) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,21 +42,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_005448) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
-  create_table "alert_settings", force: :cascade do |t|
+  create_table "budget_alert_settings", force: :cascade do |t|
     t.bigint "category_id"
     t.datetime "created_at", null: false
     t.boolean "is_active", default: true, null: false
     t.integer "threshold", null: false
+    t.integer "threshold_2"
     t.datetime "updated_at", null: false
-    t.index ["category_id"], name: "index_alert_settings_on_category_id"
+    t.index ["category_id"], name: "index_budget_alert_settings_on_category_id"
   end
 
   create_table "budget_alerts", force: :cascade do |t|
     t.bigint "category_id", null: false
     t.datetime "created_at", null: false
+    t.date "month", null: false
     t.integer "threshold", null: false
     t.datetime "updated_at", null: false
     t.integer "usage_percent", null: false
+    t.index ["category_id", "month", "threshold"], name: "index_budget_alerts_on_category_id_and_month_and_threshold", unique: true
     t.index ["category_id"], name: "index_budget_alerts_on_category_id"
   end
 
@@ -93,6 +96,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_005448) do
     t.index ["read_at"], name: "index_notifications_on_read_at"
   end
 
+  create_table "pace_alert_settings", force: :cascade do |t|
+    t.integer "active_from_day", default: 5, null: false
+    t.bigint "category_id", null: false
+    t.datetime "created_at", null: false
+    t.boolean "is_active", default: true, null: false
+    t.integer "threshold", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_pace_alert_settings_on_category_id"
+  end
+
+  create_table "pace_alerts", force: :cascade do |t|
+    t.bigint "category_id", null: false
+    t.datetime "created_at", null: false
+    t.date "month", null: false
+    t.datetime "recovered_at"
+    t.datetime "triggered_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_pace_alerts_on_category_id"
+  end
+
   create_table "store_category_mappings", force: :cascade do |t|
     t.bigint "category_id", null: false
     t.datetime "created_at", null: false
@@ -123,9 +146,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_005448) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "alert_settings", "categories"
+  add_foreign_key "budget_alert_settings", "categories"
   add_foreign_key "budget_alerts", "categories"
   add_foreign_key "budgets", "categories"
+  add_foreign_key "pace_alert_settings", "categories"
+  add_foreign_key "pace_alerts", "categories"
   add_foreign_key "store_category_mappings", "categories"
   add_foreign_key "transactions", "categories"
 end

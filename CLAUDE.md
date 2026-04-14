@@ -98,6 +98,37 @@ Rails（API） + Next.js + GraphQL構成。
 - [ ] Chapter 7-2: Vercelへのデプロイ
 - [ ] Chapter 7-3: 仕上げ ― @deprecatedと品質向上
 
+## メールアラート仕様（Chapter 5-2 実装予定）
+
+### 予算アラートメール
+- カテゴリごとに閾値を**2つまで**設定可能（例: 80% と 100%）
+- 各閾値を**超えた瞬間に1回だけ**送信
+- 月が変わったらリセット（翌月はまた送る）
+
+### ペースアラートメール
+- 日割りペース（理想消費率）に対する超過率を閾値として設定可能（例: 110%）
+- **送信開始日を設定可能**（例: 月の5日以降から有効 → 月初の誤送信を防ぐ）
+- **状態遷移ベース**で送信（GREEN/YELLOW → RED になった瞬間のみ）
+  - RED が続いている間は送らない
+  - RED → GREEN/YELLOW に回復 → また RED になったら送る
+- カテゴリごとにON/OFFで設定可能（固定費も設定次第で対象にできる）
+
+### テーブル設計
+
+**`budget_alert_settings`**（現 `alert_settings` をリネーム＋拡張）
+- `category_id`, `is_active`, `threshold_1`, `threshold_2`（nullable）
+
+**`pace_alert_settings`**（新規）
+- `category_id`, `is_active`, `threshold`（例: 110）, `active_from_day`（例: 5）
+
+**`budget_alerts`**（既存、カラム追加）
+- `month` カラム追加、`(category_id, month, threshold)` にユニーク制約
+- 重複防止 + アプリ内通知のnotifiableを兼ねる
+
+**`pace_alerts`**（新規）
+- `category_id`, `month`, `triggered_at`, `recovered_at`（null = まだRED）
+- アプリ内通知のnotifiableを兼ねる
+
 ## 参照ドキュメント
 - 要件定義書: docs/要件定義書_v6.md
 - ロードマップ: docs/開発ロードマップ.md
