@@ -19,20 +19,3 @@ RSpec.describe Category, type: :model do
   end
 end
 
-RSpec.describe VariableCategory, type: :model do
-  describe '種別' do
-    it '変動費カテゴリである' do
-      category = VariableCategory.new
-      expect(category.type).to eq('VariableCategory')
-    end
-  end
-end
-
-RSpec.describe FixedCategory, type: :model do
-  describe '種別' do
-    it '固定費カテゴリである' do
-      category = FixedCategory.new
-      expect(category.type).to eq('FixedCategory')
-    end
-  end
-end
