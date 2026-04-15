@@ -87,7 +87,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 5-4: GraphQL Subscription + Action Cable
 
 ### Part 6: フロントエンド（Next.js）
-- [ ] Chapter 6-1: GraphQLクライアントのセットアップ
+- [x] Chapter 6-1: GraphQLクライアントのセットアップ
 - [ ] Chapter 6-2: ホーム画面の実装
 - [ ] Chapter 6-3: 支出一覧・カレンダー画面の実装
 - [ ] Chapter 6-4: Mutation・ボトムシートの実装
