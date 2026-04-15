@@ -1,6 +1,7 @@
 import { query } from "@/lib/apollo-client";
 import { gql } from "@apollo/client";
 import type { HomePageDataQuery } from "@/gql/graphql";
+import Link from "next/link";
 import { SummaryCard } from "@/components/summary-card";
 import { BudgetList } from "@/components/budget-list";
 import { RecentTransactions } from "@/components/recent-transactions";
@@ -96,7 +97,15 @@ export default async function Home() {
           breakdowns={monthlySummary.categoryBreakdowns}
           idealPacePercent={idealPacePercent}
         />
-        <RecentTransactions transactions={(transactions.nodes ?? []).filter((t) => t !== null)} />
+        <div>
+          <RecentTransactions transactions={(transactions.nodes ?? []).filter((t) => t !== null)} />
+          <Link
+            href={`/transactions/${now.getFullYear()}/${now.getMonth() + 1}`}
+            className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 py-2"
+          >
+            すべての支出を見る →
+          </Link>
+        </div>
       </div>
     </main>
   );
