@@ -1,65 +1,103 @@
-import Image from "next/image";
+import { query } from "@/lib/apollo-client";
+import { gql } from "@apollo/client";
+import type { HomePageDataQuery } from "@/gql/graphql";
+import { SummaryCard } from "@/components/summary-card";
+import { BudgetList } from "@/components/budget-list";
+import { RecentTransactions } from "@/components/recent-transactions";
+import { NotificationList } from "@/components/notification-list";
 
-export default function Home() {
+const HOME_PAGE_QUERY = gql`
+  query HomePageData($year: Int!, $month: Int!) {
+    monthlySummary(year: $year, month: $month) {
+      totalAmount
+      budgetAmount
+      remainingAmount
+      categoryBreakdowns {
+        categoryId
+        categoryName
+        amount
+        paceStatus
+        budgetAmount
+        remainingAmount
+        dailyAmount
+      }
+    }
+    transactions(first: 5) {
+      nodes {
+        id
+        amount
+        storeName
+        purchasedAt
+        category {
+          id
+          name
+          color
+        }
+      }
+    }
+    notifications(first: 5, unreadOnly: true) {
+      nodes {
+        id
+        notifiable {
+          __typename
+          ... on BudgetAlert {
+            category { name }
+            threshold
+            usagePercent
+          }
+          ... on PaceAlert {
+            category { name }
+            month
+          }
+          ... on UnclassifiedAlert {
+            count
+          }
+        }
+      }
+    }
+  }
+`;
+
+export default async function Home() {
+  const now = new Date();
+  const { data } = await query<HomePageDataQuery>({
+    query: HOME_PAGE_QUERY,
+    variables: { year: now.getFullYear(), month: now.getMonth() + 1 },
+  });
+
+  if (!data) throw new Error("データの取得に失敗しました");
+
+  const { monthlySummary, transactions, notifications } = data;
+
+  // 今月の経過率（理想ペースライン位置）
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const idealPacePercent = Math.round((now.getDate() / daysInMonth) * 100);
+
+  const notificationNodes = (notifications.nodes ?? []).filter((n) => n !== null);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen">
+      <div className="max-w-md mx-auto px-4 py-8 flex flex-col gap-6">
+        <header>
+          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+            {now.getFullYear()}年{now.getMonth() + 1}月
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          <h1 className="text-2xl font-bold text-foreground mt-1">かけいぼ</h1>
+        </header>
+        {notificationNodes.length > 0 && (
+          <NotificationList notifications={notificationNodes} />
+        )}
+        <SummaryCard
+          totalAmount={monthlySummary.totalAmount}
+          budgetAmount={monthlySummary.budgetAmount}
+          remainingAmount={monthlySummary.remainingAmount}
+        />
+        <BudgetList
+          breakdowns={monthlySummary.categoryBreakdowns}
+          idealPacePercent={idealPacePercent}
+        />
+        <RecentTransactions transactions={(transactions.nodes ?? []).filter((t) => t !== null)} />
+      </div>
+    </main>
   );
 }

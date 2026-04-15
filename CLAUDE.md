@@ -16,7 +16,10 @@ Rails（API） + Next.js + GraphQL構成。
 
 ## 進捗管理ルール
 - Chapterが完了したら、✅まとめを出力する
-- まとめを出力したら「Chapter X-X を完了にしてよいですか？」と確認を取る
+- まとめを出力したら「コードレビューを行いますか？」と確認を取る
+  - 行う場合は `/everything-claude-code:code-review` スキルを実行する
+  - レビュー結果に対応が必要な指摘があれば対処してから次へ進む
+- コードレビュー完了後（またはスキップ後）、「Chapter X-X を完了にしてよいですか？」と確認を取る
 - 確認が取れたらCLAUDE.mdを更新する
 - 更新後、「コミットしてよいですか？」と確認を取り、OKならコミットまで行う
 
@@ -88,7 +91,7 @@ Rails（API） + Next.js + GraphQL構成。
 
 ### Part 6: フロントエンド（Next.js）
 - [x] Chapter 6-1: GraphQLクライアントのセットアップ
-- [ ] Chapter 6-2: ホーム画面の実装
+- [x] Chapter 6-2: ホーム画面の実装
 - [ ] Chapter 6-3: 支出一覧・カレンダー画面の実装
 - [ ] Chapter 6-4: Mutation・ボトムシートの実装
 - [ ] Chapter 6-5: 設定画面・予算詳細の実装
