@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { TransactionList } from "@/components/transaction-list";
+import { CalendarView } from "@/components/calendar-view";
 
 type Category = {
   id: string;
@@ -21,9 +21,12 @@ type Transaction = {
 
 type Props = {
   transactions: Transaction[];
+  year: number;
+  month: number;
+  budgetAmount: number;
 };
 
-export function TransactionsView({ transactions }: Props) {
+export function CalendarPageContent({ transactions, year, month, budgetAmount }: Props) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const categories = useMemo<Category[]>(() => {
@@ -87,7 +90,12 @@ export function TransactionsView({ transactions }: Props) {
         </div>
       )}
 
-      <TransactionList transactions={filtered} />
+      <CalendarView
+        transactions={filtered}
+        year={year}
+        month={month}
+        budgetAmount={budgetAmount}
+      />
     </div>
   );
 }

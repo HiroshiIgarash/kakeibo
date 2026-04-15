@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 type Props = {
   year: number;
   month: number;
+  basePath?: "transactions" | "calendar";
 };
 
 function prevMonth(year: number, month: number) {
@@ -14,7 +15,7 @@ function nextMonth(year: number, month: number) {
   return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
 }
 
-export function MonthNavigator({ year, month }: Props) {
+export function MonthNavigator({ year, month, basePath = "transactions" }: Props) {
   const prev = prevMonth(year, month);
   const next = nextMonth(year, month);
 
@@ -24,7 +25,7 @@ export function MonthNavigator({ year, month }: Props) {
   return (
     <div className="flex items-center justify-between">
       <Link
-        href={`/transactions/${prev.year}/${prev.month}`}
+        href={`/${basePath}/${prev.year}/${prev.month}`}
         className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -39,7 +40,7 @@ export function MonthNavigator({ year, month }: Props) {
         <div className="w-[72px]" />
       ) : (
         <Link
-          href={`/transactions/${next.year}/${next.month}`}
+          href={`/${basePath}/${next.year}/${next.month}`}
           className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           {next.month}月

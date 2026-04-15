@@ -2,10 +2,10 @@ import { query } from "@/lib/apollo-client";
 import { gql } from "@apollo/client";
 import { redirect } from "next/navigation";
 import { MonthNavigator } from "@/components/month-navigator";
-import { TransactionsView } from "@/components/transactions-view";
+import { CalendarPageContent } from "@/components/calendar-page-content";
 
-const TRANSACTIONS_PAGE_QUERY = gql`
-  query TransactionsPage($year: Int!, $month: Int!) {
+const CALENDAR_PAGE_QUERY = gql`
+  query CalendarPage($year: Int!, $month: Int!) {
     transactions(year: $year, month: $month, first: 500) {
       nodes {
         id
@@ -19,6 +19,9 @@ const TRANSACTIONS_PAGE_QUERY = gql`
           color
         }
       }
+    }
+    monthlySummary(year: $year, month: $month) {
+      budgetAmount
     }
   }
 `;
@@ -34,10 +37,11 @@ type Transaction = {
 
 type QueryResult = {
   transactions: { nodes: (Transaction | null)[] };
+  monthlySummary: { budgetAmount: number };
 };
 
-export default async function TransactionsPage(
-  props: PageProps<"/transactions/[year]/[month]">
+export default async function CalendarPage(
+  props: PageProps<"/calendar/[year]/[month]">
 ) {
   const { year: yearStr, month: monthStr } = await props.params;
   const year = parseInt(yearStr, 10);
@@ -51,43 +55,39 @@ export default async function TransactionsPage(
     year > currentYear || (year === currentYear && month > currentMonth);
 
   if (isNaN(year) || isNaN(month) || month < 1 || month > 12 || isFuture) {
-    redirect(`/transactions/${currentYear}/${currentMonth}`);
+    redirect(`/calendar/${currentYear}/${currentMonth}`);
   }
 
   const { data } = await query<QueryResult>({
-    query: TRANSACTIONS_PAGE_QUERY,
+    query: CALENDAR_PAGE_QUERY,
     variables: { year, month },
   });
 
   const transactions = (data?.transactions.nodes ?? []).filter(
     (t): t is Transaction => t !== null
   );
-  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const budgetAmount = data?.monthlySummary.budgetAmount ?? 0;
 
   return (
     <main className="min-h-screen">
       <div className="max-w-md mx-auto px-4 py-8 flex flex-col gap-6">
         <header>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-                支出一覧
-              </p>
-              <h1 className="text-2xl font-bold text-foreground mt-1">
-                {year}年{month}月
-              </h1>
-            </div>
-            <p className="text-sm font-mono text-muted-foreground pb-1">
-              合計 ¥{totalAmount.toLocaleString()}
-            </p>
-          </div>
+          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+            カレンダー
+          </p>
+          <h1 className="text-2xl font-bold text-foreground mt-1">
+            {year}年{month}月
+          </h1>
         </header>
 
-        <MonthNavigator year={year} month={month} />
+        <MonthNavigator year={year} month={month} basePath="calendar" />
 
-        <TransactionsView
+        <CalendarPageContent
           key={`${year}-${month}`}
           transactions={transactions}
+          year={year}
+          month={month}
+          budgetAmount={budgetAmount}
         />
       </div>
     </main>
