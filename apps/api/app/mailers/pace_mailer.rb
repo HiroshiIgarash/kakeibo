@@ -1,6 +1,4 @@
 class PaceMailer < ApplicationMailer
-  default from: "noreply@kakeibo.example.com"
-
   def pace_exceeded(category:, budget:, spent:, pace_rate:)
     @category_name = category.name
     @budget_amount = budget.amount

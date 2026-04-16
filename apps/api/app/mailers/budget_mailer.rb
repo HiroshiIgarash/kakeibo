@@ -1,6 +1,4 @@
 class BudgetMailer < ApplicationMailer
-  default from: "noreply@kakeibo.example.com"
-
   def budget_exceeded(budget:, spent:)
     @budget = budget
     @spent = spent

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      body { font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+      h1 { color: #2c7a7b; border-bottom: 2px solid #2c7a7b; padding-bottom: 8px; }
+      h2 { color: #555; font-size: 1rem; margin-top: 24px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      th, td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }
+      th { background: #f0fafa; }
+      .total { font-size: 1.4rem; font-weight: bold; color: #2c7a7b; }
+      .footer { margin-top: 32px; color: #999; font-size: 0.8rem; }
+    </style>
+  </head>
+  <body>
+    <h1>【月次レポート】<%= @target_month.year %>年<%= @target_month.month %>月の家計まとめ</h1>
+
+    <h2>前月の総支出</h2>
+    <p class="total"><%= number_with_delimiter(@total_spent) %> 円</p>
+
+    <h2>カテゴリ別支出</h2>
+    <table>
+      <tr><th>カテゴリ</th><th>支出額</th></tr>
+      <% @category_totals.each do |category, amount| %>
+        <tr>
+          <td><%= category.name %></td>
+          <td><%= number_with_delimiter(amount) %> 円</td>
+        </tr>
+      <% end %>
+    </table>
+
+    <h2>来月の推奨予算（直近3ヶ月平均）</h2>
+    <table>
+      <tr><th>カテゴリ</th><th>推奨予算額</th></tr>
+      <% @recommended_budgets.each do |category, amount| %>
+        <tr>
+          <td><%= category.name %></td>
+          <td><%= number_with_delimiter(amount) %> 円</td>
+        </tr>
+      <% end %>
+    </table>
+
+    <p class="footer">このメールはかけいぼシステムから自動送信されています。</p>
+  </body>
+</html>
