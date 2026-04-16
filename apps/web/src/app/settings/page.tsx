@@ -20,11 +20,13 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     label: "カテゴリ管理",
     icon: Tag,
     description: "カテゴリの追加・編集・削除",
+    href: "/settings/categories",
   },
   {
     label: "マッピング管理",
     icon: GitBranch,
     description: "店名とカテゴリの自動分類ルール",
+    href: "/settings/mappings",
   },
   {
     label: "メール通知",

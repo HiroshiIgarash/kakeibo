@@ -72,5 +72,10 @@ module Types
       scope = Notification.all.order(created_at: :desc)
       unread_only ? scope.where(read_at: nil) : scope
     end
+
+    field :store_mappings, [ Types::StoreCategoryMappingType ], null: false, description: "店名→カテゴリのマッピング一覧"
+    def store_mappings
+      StoreCategoryMapping.all.order(:store_name)
+    end
   end
 end
