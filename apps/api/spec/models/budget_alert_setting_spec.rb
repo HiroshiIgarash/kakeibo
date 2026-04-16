@@ -7,8 +7,8 @@ RSpec.describe BudgetAlertSetting, type: :model do
 
   describe "バリデーション" do
     it { should validate_presence_of(:threshold) }
-    it { should validate_numericality_of(:threshold).is_greater_than(0).is_less_than_or_equal_to(100) }
-    it { should validate_numericality_of(:threshold_2).is_greater_than(0).is_less_than_or_equal_to(100).allow_nil }
+    it { should validate_numericality_of(:threshold).is_greater_than(0).is_less_than_or_equal_to(200) }
+    it { should validate_numericality_of(:threshold_2).is_greater_than(0).is_less_than_or_equal_to(200).allow_nil }
 
     context "threshold_2 が threshold 以下の場合" do
       subject { build(:budget_alert_setting, threshold: 80, threshold_2: 80) }

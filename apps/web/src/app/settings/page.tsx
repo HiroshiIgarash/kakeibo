@@ -1,11 +1,20 @@
-import { Bell, Tag, GitBranch, Mail } from "lucide-react";
+import { Bell, Tag, GitBranch, Mail, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 
-const SETTINGS_SECTIONS = [
+type SettingsSection = {
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  href?: string;
+};
+
+const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     label: "アラート設定",
     icon: Bell,
     description: "予算・ペースアラートのしきい値を設定",
+    href: "/settings/alerts",
   },
   {
     label: "カテゴリ管理",
@@ -22,7 +31,7 @@ const SETTINGS_SECTIONS = [
     icon: Mail,
     description: "アラートメールの送信先・頻度",
   },
-] as const;
+];
 
 export default function SettingsPage() {
   return (
@@ -36,23 +45,45 @@ export default function SettingsPage() {
         </header>
 
         <Card className="divide-y divide-border py-0 gap-0">
-          {SETTINGS_SECTIONS.map(({ label, icon: Icon, description }) => (
-            <div
-              key={label}
-              className="flex items-center gap-4 px-4 py-4 opacity-50"
-            >
-              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                <Icon className="w-4 h-4 text-muted-foreground" />
+          {SETTINGS_SECTIONS.map(({ label, icon: Icon, description, href }) => {
+            const content = (
+              <>
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-card-foreground">{label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                </div>
+                {href ? (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0">
+                    準備中
+                  </span>
+                )}
+              </>
+            );
+
+            return href ? (
+              <Link
+                key={label}
+                href={href}
+                className="flex items-center gap-4 px-4 py-4 hover:bg-muted/50 transition-colors"
+              >
+                {content}
+              </Link>
+            ) : (
+              <div
+                key={label}
+                className="flex items-center gap-4 px-4 py-4 opacity-50"
+                aria-disabled="true"
+                role="listitem"
+              >
+                {content}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-card-foreground">{label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-              </div>
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0">
-                準備中
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </Card>
       </div>
     </main>

@@ -95,7 +95,7 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 6-3: 支出一覧・カレンダー画面の実装
 - [x] Chapter 6-4: Mutation・ボトムシートの実装
 - [x] Chapter 6-5: 予算詳細画面の実装
-- [ ] Chapter 6-6: アラート設定画面の実装
+- [x] Chapter 6-6: アラート設定画面の実装
 - [ ] Chapter 6-7: カテゴリ・マッピング管理画面の実装
 
 ### Part 7: 仕上げ・デプロイ
