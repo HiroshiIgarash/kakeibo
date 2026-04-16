@@ -1,4 +1,7 @@
+"use client";
+
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type Transaction = {
   id: string;
@@ -15,6 +18,7 @@ type Transaction = {
 
 type Props = {
   transactions: Transaction[];
+  onTransactionTap?: (transaction: Transaction) => void;
 };
 
 /**
@@ -36,7 +40,7 @@ function parseDateLabel(dateStr: string): { label: string; sortKey: string } {
 /**
  * 支出一覧。purchasedAt の降順で日付グループに分けて表示する。
  */
-export function TransactionList({ transactions }: Props) {
+export function TransactionList({ transactions, onTransactionTap }: Props) {
   if (transactions.length === 0) {
     return (
       <div>
@@ -78,28 +82,48 @@ export function TransactionList({ transactions }: Props) {
                   ¥{dayTotal.toLocaleString()}
                 </span>
               </div>
-              <Card className="py-0 gap-0 divide-y divide-border">
-                {items.map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: t.category?.color ?? "#D6D3D1" }}
-                      aria-hidden="true"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-card-foreground truncate">
-                        {t.storeName}
+              <Card className="py-0 gap-0 divide-y divide-border overflow-hidden">
+                {items.map((t) => {
+                  const content = (
+                    <>
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: t.category?.color ?? "#D6D3D1" }}
+                        aria-hidden="true"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-card-foreground truncate">
+                          {t.storeName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t.category?.name ?? "未分類"}
+                          {t.memo && ` · ${t.memo}`}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium text-card-foreground font-mono flex-shrink-0">
+                        ¥{t.amount.toLocaleString()}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t.category?.name ?? "未分類"}
-                        {t.memo && ` · ${t.memo}`}
-                      </p>
+                    </>
+                  );
+
+                  return onTransactionTap ? (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => onTransactionTap(t)}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 w-full text-left",
+                        "hover:bg-muted/50 active:bg-muted transition-colors"
+                      )}
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <div key={t.id} className="flex items-center gap-3 px-4 py-3">
+                      {content}
                     </div>
-                    <p className="text-sm font-medium text-card-foreground font-mono flex-shrink-0">
-                      ¥{t.amount.toLocaleString()}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </Card>
             </div>
           );

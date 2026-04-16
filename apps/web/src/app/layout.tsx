@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Mono, Noto_Sans_JP } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { BottomNav } from "@/components/bottom-nav";
+import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ export default function RootLayout({
           {children}
           {/* BottomNav（固定）の高さ分のスペーサー */}
           <div aria-hidden style={{ height: "calc(56px + env(safe-area-inset-bottom))" }} />
-          <BottomNav />
+          <AppShell />
         </Providers>
       </body>
     </html>

@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 
 type Transaction = {
@@ -11,6 +13,8 @@ type Props = {
   year: number;
   month: number;
   budgetAmount: number;
+  selectedDay?: number | null;
+  onDayTap?: (day: number) => void;
 };
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"] as const;
@@ -58,7 +62,7 @@ function thermalColor(t: number): string {
  * - 今日は右上に「今日」ラベルを表示
  * - 金額は中央揃え・k省略なし
  */
-export function CalendarView({ transactions, year, month, budgetAmount }: Props) {
+export function CalendarView({ transactions, year, month, budgetAmount, selectedDay, onDayTap }: Props) {
   const dailyTotals = new Map<number, number>();
   for (const t of transactions) {
     const day = parseInt(t.purchasedAt.split("-")[2] ?? "0", 10);
@@ -108,20 +112,36 @@ export function CalendarView({ transactions, year, month, budgetAmount }: Props)
                   return <div key={`e-${rowIdx}-${colIdx}`} className="h-[64px]" />;
                 }
 
-                const total   = dailyTotals.get(dayNum);
-                const isToday = dayNum === todayDay;
-                const isSun   = colIdx === 0;
-                const isSat   = colIdx === 6;
+                const total      = dailyTotals.get(dayNum);
+                const isToday    = dayNum === todayDay;
+                const isSun      = colIdx === 0;
+                const isSat      = colIdx === 6;
+                const isSelected = dayNum === selectedDay;
 
                 // 日割り予算の2倍を上限としてグラデーション。予算未設定時は色なし
                 const bgColor = total !== undefined && dailyBudget !== null
                   ? thermalColor(Math.min(total / (dailyBudget * 2), 1))
                   : undefined;
 
+                const CellTag = onDayTap ? "button" : "div";
+
                 return (
-                  <div
+                  <CellTag
                     key={dayNum}
-                    className="h-[64px] flex flex-col px-1.5 pt-1.5 pb-2"
+                    {...(onDayTap
+                      ? {
+                          type: "button" as const,
+                          onClick: () => onDayTap(dayNum),
+                          className: cn(
+                            "h-[64px] flex flex-col px-1.5 pt-1.5 pb-2 w-full transition-colors",
+                            isSelected
+                              ? "ring-2 ring-inset ring-foreground/30"
+                              : "active:bg-muted/30"
+                          ),
+                        }
+                      : {
+                          className: "h-[64px] flex flex-col px-1.5 pt-1.5 pb-2",
+                        })}
                     style={bgColor ? { backgroundColor: bgColor } : undefined}
                   >
                     {/* 上行：日付（左）＋「今日」ラベル（右） */}
@@ -148,7 +168,7 @@ export function CalendarView({ transactions, year, month, budgetAmount }: Props)
                         {formatAmount(total)}
                       </span>
                     )}
-                  </div>
+                  </CellTag>
                 );
               })}
             </div>

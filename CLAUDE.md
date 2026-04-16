@@ -92,8 +92,8 @@ Rails（API） + Next.js + GraphQL構成。
 ### Part 6: フロントエンド（Next.js）
 - [x] Chapter 6-1: GraphQLクライアントのセットアップ
 - [x] Chapter 6-2: ホーム画面の実装
-- [ ] Chapter 6-3: 支出一覧・カレンダー画面の実装
-- [ ] Chapter 6-4: Mutation・ボトムシートの実装
+- [x] Chapter 6-3: 支出一覧・カレンダー画面の実装
+- [x] Chapter 6-4: Mutation・ボトムシートの実装
 - [ ] Chapter 6-5: 設定画面・予算詳細の実装
 
 ### Part 7: 仕上げ・デプロイ
