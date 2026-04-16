@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useCategoryFilter } from "@/hooks/use-category-filter";
 import { CategoryFilterChips } from "@/components/category-filter-chips";
@@ -48,13 +48,14 @@ export function CalendarPageContent({ transactions, year, month, budgetAmount }:
   const [defaultDate, setDefaultDate] = useState<string | undefined>(undefined);
 
   // 選択日の支出一覧
-  const dayTransactions = useMemo(() => {
-    if (selectedDay === null) return [];
-    const dayStr = String(selectedDay).padStart(2, "0");
-    const monthStr = String(month).padStart(2, "0");
-    const datePrefix = `${year}-${monthStr}-${dayStr}`;
-    return filtered.filter((t) => t.purchasedAt === datePrefix);
-  }, [filtered, selectedDay, year, month]);
+  const dayTransactions =
+    selectedDay === null
+      ? []
+      : filtered.filter((t) => {
+          const dayStr = String(selectedDay).padStart(2, "0");
+          const monthStr = String(month).padStart(2, "0");
+          return t.purchasedAt === `${year}-${monthStr}-${dayStr}`;
+        });
 
   const dayTotal = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
 
