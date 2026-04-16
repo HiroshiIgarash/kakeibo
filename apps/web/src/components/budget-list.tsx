@@ -2,12 +2,13 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { PaceStatus } from "@/gql/graphql";
 
 type CategoryBreakdown = {
   categoryId: string;
   categoryName: string;
   amount: number;
-  paceStatus?: string | null;
+  paceStatus?: PaceStatus | null;
   budgetAmount?: number | null;
   remainingAmount?: number | null;
   dailyAmount?: number | null;
@@ -19,16 +20,16 @@ type Props = {
   idealPacePercent: number;
 };
 
-const paceConfig = {
-  GREEN:  { label: "順調", className: "bg-emerald-50 text-emerald-700 border-transparent" },
-  YELLOW: { label: "注意", className: "bg-amber-50 text-amber-700 border-transparent" },
-  RED:    { label: "超過", className: "bg-red-50 text-red-600 border-transparent" },
+const paceConfig: Record<PaceStatus, { label: string; className: string }> = {
+  [PaceStatus.Green]:  { label: "順調", className: "bg-emerald-50 text-emerald-700 border-transparent" },
+  [PaceStatus.Yellow]: { label: "注意", className: "bg-amber-50 text-amber-700 border-transparent" },
+  [PaceStatus.Red]:    { label: "超過", className: "bg-red-50 text-red-600 border-transparent" },
 };
 
-const paceIndicatorClass = {
-  GREEN:  "bg-emerald-400",
-  YELLOW: "bg-amber-400",
-  RED:    "bg-red-400",
+const paceIndicatorClass: Record<PaceStatus, string> = {
+  [PaceStatus.Green]:  "bg-emerald-400",
+  [PaceStatus.Yellow]: "bg-amber-400",
+  [PaceStatus.Red]:    "bg-red-400",
 };
 
 /**
@@ -53,12 +54,8 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
             b.budgetAmount > 0
               ? Math.min(Math.round((b.amount / b.budgetAmount) * 100), 100)
               : 0;
-          const pace = b.paceStatus
-            ? paceConfig[b.paceStatus as keyof typeof paceConfig]
-            : null;
-          const indicatorClass = b.paceStatus
-            ? paceIndicatorClass[b.paceStatus as keyof typeof paceIndicatorClass]
-            : undefined;
+          const pace = b.paceStatus ? paceConfig[b.paceStatus] : null;
+          const indicatorClass = b.paceStatus ? paceIndicatorClass[b.paceStatus] : undefined;
 
           return (
             <li key={b.categoryId} className="list-none">

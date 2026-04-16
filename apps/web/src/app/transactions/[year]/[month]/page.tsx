@@ -3,6 +3,9 @@ import { gql } from "@apollo/client";
 import { redirect } from "next/navigation";
 import { MonthNavigator } from "@/components/month-navigator";
 import { TransactionsView } from "@/components/transactions-view";
+import { BudgetList } from "@/components/budget-list";
+import { SummaryCard } from "@/components/summary-card";
+import type { TransactionsPageQuery } from "@/gql/graphql";
 
 const TRANSACTIONS_PAGE_QUERY = gql`
   query TransactionsPage($year: Int!, $month: Int!) {
@@ -20,21 +23,26 @@ const TRANSACTIONS_PAGE_QUERY = gql`
         }
       }
     }
+    monthlySummary(year: $year, month: $month) {
+      totalAmount
+      budgetAmount
+      remainingAmount
+      categoryBreakdowns {
+        categoryId
+        categoryName
+        amount
+        paceStatus
+        budgetAmount
+        remainingAmount
+        dailyAmount
+      }
+    }
   }
 `;
 
-type Transaction = {
-  id: string;
-  amount: number;
-  storeName: string;
-  purchasedAt: string;
-  memo?: string | null;
-  category?: { id: string; name: string; color?: string | null } | null;
-};
-
-type QueryResult = {
-  transactions: { nodes: (Transaction | null)[] };
-};
+type Transaction = NonNullable<
+  NonNullable<TransactionsPageQuery["transactions"]["nodes"]>[number]
+>;
 
 export default async function TransactionsPage(
   props: PageProps<"/transactions/[year]/[month]">
@@ -54,41 +62,60 @@ export default async function TransactionsPage(
     redirect(`/transactions/${currentYear}/${currentMonth}`);
   }
 
-  const { data } = await query<QueryResult>({
+  const { data } = await query<TransactionsPageQuery>({
     query: TRANSACTIONS_PAGE_QUERY,
     variables: { year, month },
   });
 
-  const transactions = (data?.transactions.nodes ?? []).filter(
+  if (!data) throw new Error("データの取得に失敗しました");
+
+  const transactions = (data.transactions.nodes ?? []).filter(
     (t): t is Transaction => t !== null
   );
-  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+  const { monthlySummary } = data;
+
+  // 今月なら今日の経過率、過去月は完了しているので100%
+  const isCurrentMonth = year === currentYear && month === currentMonth;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const idealPacePercent = isCurrentMonth
+    ? Math.round((now.getDate() / daysInMonth) * 100)
+    : 100;
 
   return (
     <main className="min-h-screen">
       <div className="max-w-md mx-auto px-4 py-8 flex flex-col gap-6">
         <header>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-                支出一覧
-              </p>
-              <h1 className="text-2xl font-bold text-foreground mt-1">
-                {year}年{month}月
-              </h1>
-            </div>
-            <p className="text-sm font-mono text-muted-foreground pb-1">
-              合計 ¥{totalAmount.toLocaleString()}
-            </p>
-          </div>
+          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+            支出一覧
+          </p>
+          <h1 className="text-2xl font-bold text-foreground mt-1">
+            {year}年{month}月
+          </h1>
         </header>
 
         <MonthNavigator year={year} month={month} />
 
-        <TransactionsView
-          key={`${year}-${month}`}
-          transactions={transactions}
+        <SummaryCard
+          totalAmount={monthlySummary.totalAmount}
+          budgetAmount={monthlySummary.budgetAmount}
+          remainingAmount={monthlySummary.remainingAmount}
         />
+
+        <BudgetList
+          breakdowns={monthlySummary.categoryBreakdowns}
+          idealPacePercent={idealPacePercent}
+        />
+
+        <div className="border-t border-border pt-2">
+          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase mb-4">
+            支出明細
+          </p>
+          <TransactionsView
+            key={`${year}-${month}`}
+            transactions={transactions}
+          />
+        </div>
       </div>
     </main>
   );

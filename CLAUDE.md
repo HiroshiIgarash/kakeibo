@@ -94,14 +94,15 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 6-2: ホーム画面の実装
 - [x] Chapter 6-3: 支出一覧・カレンダー画面の実装
 - [x] Chapter 6-4: Mutation・ボトムシートの実装
-- [ ] Chapter 6-5: 予算詳細画面の実装
+- [x] Chapter 6-5: 予算詳細画面の実装
 - [ ] Chapter 6-6: アラート設定画面の実装
 - [ ] Chapter 6-7: カテゴリ・マッピング管理画面の実装
 
 ### Part 7: 仕上げ・デプロイ
-- [ ] Chapter 7-1: Railwayへのデプロイ
-- [ ] Chapter 7-2: Vercelへのデプロイ
-- [ ] Chapter 7-3: 仕上げ ― @deprecatedと品質向上
+- [ ] Chapter 7-1: credentials移行 ― ENV から Rails credentials へ
+- [ ] Chapter 7-2: Railwayへのデプロイ
+- [ ] Chapter 7-3: Vercelへのデプロイ
+- [ ] Chapter 7-4: 仕上げ ― @deprecatedと品質向上
 
 ## メールアラート仕様（Chapter 5-2 実装予定）
 
