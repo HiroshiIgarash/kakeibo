@@ -298,4 +298,84 @@ RSpec.describe Types::QueryType do
       end
     end
   end
+
+  describe "dailyAllowance(categoryId:)" do
+    let!(:category) { create(:category) }
+
+    # 2025年1月10日（31日月）で固定
+    # ideal_rate = 10/31 ≈ 0.3226
+    # remaining_days = 22（1/10〜1/31、今日含む）
+    around { |e| travel_to(Date.new(2025, 1, 10)) { e.run } }
+
+    context "予算が設定されている場合" do
+      let!(:budget) { create(:budget, category: category, amount: 30_000, month: Date.new(2025, 1, 1)) }
+
+      before do
+        # pace_rate = (5_000/30_000) / (10/31) ≈ 0.517 → GREEN
+        create(:transaction, category: category, amount: 5_000, purchased_at: Date.new(2025, 1, 5))
+      end
+
+      let(:query) do
+        <<~GQL
+          query {
+            dailyAllowance(categoryId: "#{category.id}") {
+              paceStatus
+              spent
+              budgetAmount
+              remainingAmount
+              remainingDays
+              dailyAmount
+              paceRate
+            }
+          }
+        GQL
+      end
+
+      it "ペース情報を返す" do
+        result = ApiSchema.execute(query)
+        data = result["data"]["dailyAllowance"]
+
+        expect(data["paceStatus"]).to eq("GREEN")
+        expect(data["spent"]).to eq(5_000)
+        expect(data["budgetAmount"]).to eq(30_000)
+        expect(data["remainingAmount"]).to eq(25_000)
+        expect(data["remainingDays"]).to eq(22)
+        expect(data["dailyAmount"]).to eq(1_136) # 25_000 / 22
+      end
+    end
+
+    context "予算が設定されていない場合" do
+      let(:query) do
+        <<~GQL
+          query {
+            dailyAllowance(categoryId: "#{category.id}") {
+              paceStatus
+            }
+          }
+        GQL
+      end
+
+      it "nilを返す" do
+        result = ApiSchema.execute(query)
+        expect(result["data"]["dailyAllowance"]).to be_nil
+      end
+    end
+
+    context "存在しないカテゴリIDの場合" do
+      let(:query) do
+        <<~GQL
+          query {
+            dailyAllowance(categoryId: "9999999") {
+              paceStatus
+            }
+          }
+        GQL
+      end
+
+      it "nilを返す" do
+        result = ApiSchema.execute(query)
+        expect(result["data"]["dailyAllowance"]).to be_nil
+      end
+    end
+  end
 end

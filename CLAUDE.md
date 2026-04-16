@@ -97,6 +97,9 @@ Rails（API） + Next.js + GraphQL構成。
 - [x] Chapter 6-5: 予算詳細画面の実装
 - [x] Chapter 6-6: アラート設定画面の実装
 - [x] Chapter 6-7: カテゴリ・マッピング管理画面の実装
+- [x] Chapter 6-8: DailyAllowance Query ― BudgetPaceCalculatorをGraphQLに繋ぐ
+- [ ] Chapter 6-9: 月次サマリーメール ― Cron + Action Mailer
+- [ ] Chapter 6-10: メール通知設定画面 ― 設定の可視化
 
 ### Part 7: 仕上げ・デプロイ
 - [ ] Chapter 7-1: credentials移行 ― ENV から Rails credentials へ

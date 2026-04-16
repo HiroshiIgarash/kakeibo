@@ -77,5 +77,15 @@ module Types
     def store_mappings
       StoreCategoryMapping.all.order(:store_name)
     end
+
+    field :daily_allowance, Types::DailyAllowanceType, null: true, description: "カテゴリの日当たり許容額とペース状態" do
+      argument :category_id, ID, required: true, description: "対象カテゴリID"
+    end
+    def daily_allowance(category_id:)
+      category = Category.find_by(id: category_id)
+      return nil unless category
+
+      ::BudgetPaceCalculator.new(category: category).call
+    end
   end
 end
