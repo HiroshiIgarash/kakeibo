@@ -1,48 +1,17 @@
-import { query } from "@/lib/apollo-client";
-import { gql } from "@apollo/client";
+import { db } from "@/db/client";
+import { loadStoreMappings, loadCategoryOptions } from "@/lib/queries";
 import { MappingManagementContent } from "@/components/mapping-management-content";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-const MAPPINGS_PAGE_QUERY = gql`
-  query MappingsPage {
-    storeMappings {
-      id
-      storeName
-      categoryId
-      category {
-        id
-        name
-        color
-      }
-    }
-    categories {
-      id
-      name
-    }
-  }
-`;
-
-type StoreMapping = {
-  id: string;
-  storeName: string;
-  categoryId: string;
-  category: { id: string; name: string; color?: string | null };
-};
-
-type CategoryData = { id: string; name: string };
-
-type MappingsPageData = {
-  storeMappings: StoreMapping[];
-  categories: CategoryData[];
-};
+// DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
+export const dynamic = "force-dynamic";
 
 export default async function MappingsPage() {
-  const { data } = await query<MappingsPageData>({
-    query: MAPPINGS_PAGE_QUERY,
-  });
-
-  if (!data) throw new Error("データの取得に失敗しました");
+  const [mappings, categories] = await Promise.all([
+    loadStoreMappings(db),
+    loadCategoryOptions(db),
+  ]);
 
   return (
     <main className="min-h-screen">
@@ -61,10 +30,7 @@ export default async function MappingsPage() {
           <h1 className="text-2xl font-bold text-foreground mt-1">マッピング管理</h1>
         </header>
 
-        <MappingManagementContent
-          initialMappings={data.storeMappings}
-          initialCategories={data.categories}
-        />
+        <MappingManagementContent initialMappings={mappings} initialCategories={categories} />
       </div>
     </main>
   );

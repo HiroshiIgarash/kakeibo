@@ -2,7 +2,9 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { PaceStatus } from "@/gql/graphql";
+
+// gql 由来の PaceStatus enum をローカルの文字列 union に置換
+type PaceStatus = "GREEN" | "YELLOW" | "RED";
 
 type CategoryBreakdown = {
   categoryId: string;
@@ -21,15 +23,15 @@ type Props = {
 };
 
 const paceConfig: Record<PaceStatus, { label: string; className: string }> = {
-  [PaceStatus.Green]:  { label: "順調", className: "bg-emerald-50 text-emerald-700 border-transparent" },
-  [PaceStatus.Yellow]: { label: "注意", className: "bg-amber-50 text-amber-700 border-transparent" },
-  [PaceStatus.Red]:    { label: "超過", className: "bg-red-50 text-red-600 border-transparent" },
+  GREEN:  { label: "順調", className: "bg-emerald-50 text-emerald-700 border-transparent" },
+  YELLOW: { label: "注意", className: "bg-amber-50 text-amber-700 border-transparent" },
+  RED:    { label: "超過", className: "bg-red-50 text-red-600 border-transparent" },
 };
 
 const paceIndicatorClass: Record<PaceStatus, string> = {
-  [PaceStatus.Green]:  "bg-emerald-400",
-  [PaceStatus.Yellow]: "bg-amber-400",
-  [PaceStatus.Red]:    "bg-red-400",
+  GREEN:  "bg-emerald-400",
+  YELLOW: "bg-amber-400",
+  RED:    "bg-red-400",
 };
 
 /**

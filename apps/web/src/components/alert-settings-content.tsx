@@ -1,51 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
-import { AlertSettingKind } from "@/gql/graphql";
+import { useState } from "react";
+import { upsertBudgetAlertSetting, upsertPaceAlertSetting } from "@/actions/alert-settings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type UpsertAlertSettingData = {
-  upsertAlertSetting: {
-    budgetAlertSetting?: {
-      id: string;
-      threshold: number;
-      threshold2?: number | null;
-      isActive: boolean;
-    } | null;
-    paceAlertSetting?: {
-      id: string;
-      threshold: number;
-      activeFromDay: number;
-      isActive: boolean;
-    } | null;
-    errors: string[];
-  };
-};
-
-const UPSERT_ALERT_SETTING = gql`
-  mutation UpsertAlertSettingMutation($input: UpsertAlertSettingInput!) {
-    upsertAlertSetting(input: $input) {
-      budgetAlertSetting {
-        id
-        threshold
-        threshold2
-        isActive
-      }
-      paceAlertSetting {
-        id
-        threshold
-        activeFromDay
-        isActive
-      }
-      errors
-    }
-  }
-`;
 
 type BudgetAlertSettingData = {
   id: string;
@@ -99,41 +60,18 @@ function BudgetAlertRow({
   );
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [status, setStatus] = useState<SaveStatus>("idle");
-  const mountedRef = useRef(true);
-  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
-  const [upsert] = useMutation<UpsertAlertSettingData>(UPSERT_ALERT_SETTING);
-
-  function handleSave() {
+  async function handleSave() {
     const t1 = parseInt(threshold, 10);
-    const t2 = threshold2.trim() !== "" ? parseInt(threshold2, 10) : undefined;
+    const t2 = threshold2.trim() !== "" ? parseInt(threshold2, 10) : null;
     if (isNaN(t1) || t1 < 1 || t1 > 200) { setStatus("invalid"); return; }
-    if (t2 !== undefined && (isNaN(t2) || t2 < 1 || t2 > 200)) { setStatus("invalid"); return; }
-    if (t2 !== undefined && t2 <= t1) { setStatus("invalid"); return; }
+    if (t2 !== null && (isNaN(t2) || t2 < 1 || t2 > 200)) { setStatus("invalid"); return; }
+    if (t2 !== null && t2 <= t1) { setStatus("invalid"); return; }
 
     setStatus("saving");
-    upsert({
-      variables: {
-        input: {
-          settingType: AlertSettingKind.Budget,
-          categoryId: categoryId ?? undefined,
-          threshold: t1,
-          threshold2: t2 ?? null,
-          isActive,
-        },
-      },
-      onCompleted(data) {
-        if (!mountedRef.current) return;
-        const errors = data?.upsertAlertSetting?.errors ?? [];
-        setStatus(errors.length > 0 ? "error" : "saved");
-        setTimeout(() => { if (mountedRef.current) setStatus("idle"); }, 2000);
-      },
-      onError() {
-        if (!mountedRef.current) return;
-        setStatus("error");
-        setTimeout(() => { if (mountedRef.current) setStatus("idle"); }, 2000);
-      },
-    });
+    const result = await upsertBudgetAlertSetting({ categoryId, threshold: t1, threshold2: t2, isActive });
+    setStatus(result.errors.length > 0 ? "error" : "saved");
+    setTimeout(() => setStatus("idle"), 2000);
   }
 
   return (
@@ -141,22 +79,7 @@ function BudgetAlertRow({
       <CardContent className="p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-card-foreground">{label}</span>
-          <button
-            type="button"
-            onClick={() => setIsActive((v) => !v)}
-            className={cn(
-              "relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none",
-              isActive ? "bg-emerald-500" : "bg-muted"
-            )}
-            aria-label={isActive ? "有効" : "無効"}
-          >
-            <span
-              className={cn(
-                "inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
-                isActive ? "translate-x-4.5" : "translate-x-0.5"
-              )}
-            />
-          </button>
+          <ToggleSwitch enabled={isActive} onToggle={() => setIsActive((v) => !v)} />
         </div>
 
         <div className="flex items-end gap-2">
@@ -232,40 +155,17 @@ function PaceAlertRow({
   );
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [status, setStatus] = useState<SaveStatus>("idle");
-  const mountedRef = useRef(true);
-  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
-  const [upsert] = useMutation<UpsertAlertSettingData>(UPSERT_ALERT_SETTING);
-
-  function handleSave() {
+  async function handleSave() {
     const t = parseInt(threshold, 10);
     const day = parseInt(activeFromDay, 10);
     if (isNaN(t) || t < 101 || t > 500) { setStatus("invalid"); return; }
     if (isNaN(day) || day < 1 || day > 28) { setStatus("invalid"); return; }
 
     setStatus("saving");
-    upsert({
-      variables: {
-        input: {
-          settingType: AlertSettingKind.Pace,
-          categoryId: category.id,
-          threshold: t,
-          activeFromDay: day,
-          isActive,
-        },
-      },
-      onCompleted(data) {
-        if (!mountedRef.current) return;
-        const errors = data?.upsertAlertSetting?.errors ?? [];
-        setStatus(errors.length > 0 ? "error" : "saved");
-        setTimeout(() => { if (mountedRef.current) setStatus("idle"); }, 2000);
-      },
-      onError() {
-        if (!mountedRef.current) return;
-        setStatus("error");
-        setTimeout(() => { if (mountedRef.current) setStatus("idle"); }, 2000);
-      },
-    });
+    const result = await upsertPaceAlertSetting({ categoryId: category.id, threshold: t, activeFromDay: day, isActive });
+    setStatus(result.errors.length > 0 ? "error" : "saved");
+    setTimeout(() => setStatus("idle"), 2000);
   }
 
   return (
@@ -273,22 +173,7 @@ function PaceAlertRow({
       <CardContent className="p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-card-foreground">{category.name}</span>
-          <button
-            type="button"
-            onClick={() => setIsActive((v) => !v)}
-            className={cn(
-              "relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none",
-              isActive ? "bg-emerald-500" : "bg-muted"
-            )}
-            aria-label={isActive ? "有効" : "無効"}
-          >
-            <span
-              className={cn(
-                "inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
-                isActive ? "translate-x-4.5" : "translate-x-0.5"
-              )}
-            />
-          </button>
+          <ToggleSwitch enabled={isActive} onToggle={() => setIsActive((v) => !v)} />
         </div>
 
         <div className="flex items-end gap-2">

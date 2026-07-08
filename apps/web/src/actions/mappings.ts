@@ -6,13 +6,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { storeCategoryMappings, transactions } from "@/db/schema";
 import { evaluateAlertsForTransaction, refreshUnclassifiedAlert } from "@/lib/alerts";
+import { normalizeStoreName } from "@/lib/store-name";
 
 export type ActionResult = { errors: string[] };
-
-/** 店舗名の正規化規則（spec §6.1）。email-parser 側とも一致させるため export する。 */
-export function normalizeStoreName(s: string): string {
-  return s.normalize("NFKC").trim();
-}
 
 const upsertSchema = z.object({
   storeName: z.string().trim().min(1, "店名を入力してください"),

@@ -1,97 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import { useRouter } from "next/navigation";
+import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ────────────────────────────────────────────────────────────────
-// GraphQL
-// ────────────────────────────────────────────────────────────────
-const CATEGORIES_QUERY = gql`
-  query CategoriesManagement {
-    categories {
-      id
-      name
-      categoryType
-      color
-      children {
-        id
-        name
-        categoryType
-        color
-      }
-    }
-  }
-`;
-
-const CREATE_CATEGORY = gql`
-  mutation CreateCategoryMutation($input: CreateCategoryInput!) {
-    createCategory(input: $input) {
-      category {
-        id
-        name
-        categoryType
-        color
-      }
-      errors
-    }
-  }
-`;
-
-const UPDATE_CATEGORY = gql`
-  mutation UpdateCategoryMutation($input: UpdateCategoryInput!) {
-    updateCategory(input: $input) {
-      category {
-        id
-        name
-        color
-      }
-      errors
-    }
-  }
-`;
-
-const DELETE_CATEGORY = gql`
-  mutation DeleteCategoryMutation($input: DeleteCategoryInput!) {
-    deleteCategory(input: $input) {
-      category {
-        id
-      }
-      errors
-    }
-  }
-`;
-
-// ────────────────────────────────────────────────────────────────
 // Types
 // ────────────────────────────────────────────────────────────────
-type Category = {
-  id: string;
-  name: string;
-  categoryType: string;
-  color?: string | null;
-  children: Category[];
-};
+type Category = { id: string; name: string; kind: "fixed" | "variable"; color?: string | null };
 
-type CreateCategoryData = {
-  createCategory: { category: Category | null; errors: string[] };
-};
-
-type UpdateCategoryData = {
-  updateCategory: { category: Category | null; errors: string[] };
-};
-
-type DeleteCategoryData = {
-  deleteCategory: { category: { id: string } | null; errors: string[] };
-};
-
-const CATEGORY_TYPES = [
-  { value: "FixedCategory", label: "固定費" },
-  { value: "VariableCategory", label: "変動費" },
+const CATEGORY_TYPES: { value: "fixed" | "variable"; label: string }[] = [
+  { value: "fixed", label: "固定費" },
+  { value: "variable", label: "変動費" },
 ];
 
 const PRESET_COLORS = [
@@ -104,31 +28,23 @@ const PRESET_COLORS = [
 // 新規追加フォーム
 // ────────────────────────────────────────────────────────────────
 function AddCategoryForm({ onDone }: { onDone: () => void }) {
+  const router = useRouter();
   const [name, setName] = useState("");
-  const [categoryType, setCategoryType] = useState("VariableCategory");
+  const [kind, setKind] = useState<"fixed" | "variable">("variable");
   const [color, setColor] = useState(PRESET_COLORS[4]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const [create, { loading }] = useMutation<CreateCategoryData>(CREATE_CATEGORY, {
-    refetchQueries: [{ query: CATEGORIES_QUERY }],
-    onCompleted(data) {
-      const errors = data?.createCategory?.errors ?? [];
-      if (errors.length > 0) {
-        setError(errors.join(", "));
-      } else {
-        onDone();
-      }
-    },
-    onError() {
-      setError("保存に失敗しました");
-    },
-  });
-
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError("カテゴリ名を入力してください"); return; }
     setError(null);
-    create({ variables: { input: { name: name.trim(), categoryType, color } } });
+    setLoading(true);
+    const result = await createCategory({ name: name.trim(), kind, color });
+    setLoading(false);
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    router.refresh();
+    onDone();
   }
 
   return (
@@ -152,10 +68,10 @@ function AddCategoryForm({ onDone }: { onDone: () => void }) {
             <button
               key={t.value}
               type="button"
-              onClick={() => setCategoryType(t.value)}
+              onClick={() => setKind(t.value)}
               className={cn(
                 "flex-1 py-1.5 text-xs rounded-md border transition-colors",
-                categoryType === t.value
+                kind === t.value
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-background text-muted-foreground hover:bg-muted"
               )}
@@ -200,39 +116,36 @@ function AddCategoryForm({ onDone }: { onDone: () => void }) {
 // カテゴリ行（編集・削除）
 // ────────────────────────────────────────────────────────────────
 function CategoryRow({ category }: { category: Category }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
   const [color, setColor] = useState(category.color ?? PRESET_COLORS[4]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const [update, { loading: updating }] = useMutation<UpdateCategoryData>(UPDATE_CATEGORY, {
-    refetchQueries: [{ query: CATEGORIES_QUERY }],
-    onCompleted(data) {
-      const errors = data?.updateCategory?.errors ?? [];
-      if (errors.length > 0) {
-        setError(errors.join(", "));
-      } else {
-        setEditing(false);
-        setError(null);
-      }
-    },
-    onError() { setError("保存に失敗しました"); },
-  });
-
-  const [remove, { loading: deleting }] = useMutation<DeleteCategoryData>(DELETE_CATEGORY, {
-    refetchQueries: [{ query: CATEGORIES_QUERY }],
-    onError() { setError("削除に失敗しました"); },
-  });
-
-  function handleUpdate(e: React.FormEvent) {
+  async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError("カテゴリ名を入力してください"); return; }
     setError(null);
-    update({ variables: { input: { id: category.id, name: name.trim(), color } } });
+    setUpdating(true);
+    const result = await updateCategory({ id: category.id, name: name.trim(), color });
+    setUpdating(false);
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    setEditing(false);
+    router.refresh();
   }
 
-  const typeLabel = category.categoryType === "FixedCategory" ? "固定費" : "変動費";
+  async function handleRemove() {
+    setDeleting(true);
+    const result = await deleteCategory({ id: category.id });
+    setDeleting(false);
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    router.refresh();
+  }
+
+  const typeLabel = category.kind === "fixed" ? "固定費" : "変動費";
 
   if (editing) {
     return (
@@ -295,7 +208,7 @@ function CategoryRow({ category }: { category: Category }) {
             type="button"
             variant="destructive"
             size="sm"
-            onClick={() => remove({ variables: { input: { id: category.id } } })}
+            onClick={handleRemove}
             disabled={deleting}
           >
             {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : "削除"}
@@ -321,31 +234,13 @@ function CategoryRow({ category }: { category: Category }) {
 // ────────────────────────────────────────────────────────────────
 // メインコンポーネント
 // ────────────────────────────────────────────────────────────────
-type InitialCategory = {
-  id: string;
-  name: string;
-  categoryType: string;
-  color?: string | null;
-  children: InitialCategory[];
-};
+type InitialCategory = { id: string; name: string; kind: "fixed" | "variable"; color?: string | null };
 
-export function CategoryManagementContent({
-  initialCategories,
-}: {
-  initialCategories: InitialCategory[];
-}) {
+export function CategoryManagementContent({ initialCategories }: { initialCategories: InitialCategory[] }) {
   const [adding, setAdding] = useState(false);
-
-  // クライアントサイドで最新データを取得（Server側で初期データ取得済み）
-  const { data } = useQuery<{ categories: Category[] }>(CATEGORIES_QUERY, {
-    fetchPolicy: "cache-and-network",
-  });
-
-  const categories: Category[] = data?.categories ?? initialCategories;
-
-  // GraphQL クエリが root カテゴリのみを返すため、そのまま分類する
-  const fixed = categories.filter((c) => c.categoryType === "FixedCategory");
-  const variable = categories.filter((c) => c.categoryType === "VariableCategory");
+  const categories = initialCategories; // RSC が revalidate 後の最新を渡す
+  const fixed = categories.filter((c) => c.kind === "fixed");
+  const variable = categories.filter((c) => c.kind === "variable");
 
   return (
     <div className="flex flex-col gap-8">

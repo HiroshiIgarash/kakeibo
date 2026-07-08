@@ -1,70 +1,17 @@
-import { query } from "@/lib/apollo-client";
-import { gql } from "@apollo/client";
+import { db } from "@/db/client";
+import { loadAlertSettingsView, loadCategories } from "@/lib/queries";
 import { AlertSettingsContent } from "@/components/alert-settings-content";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-const ALERT_SETTINGS_PAGE_QUERY = gql`
-  query AlertSettingsPage {
-    alertSettings {
-      budgetAlertSettings {
-        id
-        categoryId
-        threshold
-        threshold2
-        isActive
-        category {
-          id
-          name
-        }
-      }
-      paceAlertSettings {
-        id
-        categoryId
-        threshold
-        activeFromDay
-        isActive
-        category {
-          id
-          name
-        }
-      }
-    }
-    categories {
-      id
-      name
-    }
-  }
-`;
-
-type AlertSettingsPageData = {
-  alertSettings: {
-    budgetAlertSettings: Array<{
-      id: string;
-      categoryId?: string | null;
-      threshold: number;
-      threshold2?: number | null;
-      isActive: boolean;
-      category?: { id: string; name: string } | null;
-    }>;
-    paceAlertSettings: Array<{
-      id: string;
-      categoryId: string;
-      threshold: number;
-      activeFromDay: number;
-      isActive: boolean;
-      category: { id: string; name: string };
-    }>;
-  };
-  categories: Array<{ id: string; name: string }>;
-};
+// DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
+export const dynamic = "force-dynamic";
 
 export default async function AlertSettingsPage() {
-  const { data } = await query<AlertSettingsPageData>({
-    query: ALERT_SETTINGS_PAGE_QUERY,
-  });
-
-  if (!data) throw new Error("データの取得に失敗しました");
+  const [alertSettings, categories] = await Promise.all([
+    loadAlertSettingsView(db),
+    loadCategories(db),
+  ]);
 
   return (
     <main className="min-h-screen">
@@ -84,9 +31,9 @@ export default async function AlertSettingsPage() {
         </header>
 
         <AlertSettingsContent
-          budgetAlertSettings={data.alertSettings.budgetAlertSettings}
-          paceAlertSettings={data.alertSettings.paceAlertSettings}
-          categories={data.categories}
+          budgetAlertSettings={alertSettings.budgetAlertSettings}
+          paceAlertSettings={alertSettings.paceAlertSettings}
+          categories={categories}
         />
       </div>
     </main>

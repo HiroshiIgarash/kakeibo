@@ -1,44 +1,14 @@
-import { query } from "@/lib/apollo-client";
-import { gql } from "@apollo/client";
+import { db } from "@/db/client";
+import { loadCategories } from "@/lib/queries";
 import { CategoryManagementContent } from "@/components/category-management-content";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-const CATEGORIES_PAGE_QUERY = gql`
-  query CategoriesPage {
-    categories {
-      id
-      name
-      categoryType
-      color
-      children {
-        id
-        name
-        categoryType
-        color
-      }
-    }
-  }
-`;
-
-type CategoryData = {
-  id: string;
-  name: string;
-  categoryType: string;
-  color?: string | null;
-  children: CategoryData[];
-};
-
-type CategoriesPageData = {
-  categories: CategoryData[];
-};
+// DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
+export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
-  const { data } = await query<CategoriesPageData>({
-    query: CATEGORIES_PAGE_QUERY,
-  });
-
-  if (!data) throw new Error("データの取得に失敗しました");
+  const categories = await loadCategories(db);
 
   return (
     <main className="min-h-screen">
@@ -57,7 +27,7 @@ export default async function CategoriesPage() {
           <h1 className="text-2xl font-bold text-foreground mt-1">カテゴリ管理</h1>
         </header>
 
-        <CategoryManagementContent initialCategories={data.categories} />
+        <CategoryManagementContent initialCategories={categories} />
       </div>
     </main>
   );

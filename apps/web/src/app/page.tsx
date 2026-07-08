@@ -1,102 +1,48 @@
-import { query } from "@/lib/apollo-client";
-import { gql } from "@apollo/client";
-import type { HomePageDataQuery } from "@/gql/graphql";
+import { db } from "@/db/client";
+import { loadMonthlySummaryView, loadRecentTransactions } from "@/lib/queries";
+import { loadUnreadNotifications } from "@/lib/notifications";
+import { jstToday, jstDateParts, jstDaysInMonth, jstDayOfMonth } from "@/lib/dates";
 import { SummaryCard } from "@/components/summary-card";
 import { BudgetList } from "@/components/budget-list";
 import { RecentTransactions } from "@/components/recent-transactions";
 import { NotificationList } from "@/components/notification-list";
 
-const HOME_PAGE_QUERY = gql`
-  query HomePageData($year: Int!, $month: Int!) {
-    monthlySummary(year: $year, month: $month) {
-      totalAmount
-      budgetAmount
-      remainingAmount
-      categoryBreakdowns {
-        categoryId
-        categoryName
-        amount
-        paceStatus
-        budgetAmount
-        remainingAmount
-        dailyAmount
-      }
-    }
-    transactions(first: 5) {
-      nodes {
-        id
-        amount
-        storeName
-        purchasedAt
-        category {
-          id
-          name
-          color
-        }
-      }
-    }
-    notifications(first: 5, unreadOnly: true) {
-      nodes {
-        id
-        notifiable {
-          __typename
-          ... on BudgetAlert {
-            category { name }
-            threshold
-            usagePercent
-          }
-          ... on PaceAlert {
-            category { name }
-            month
-          }
-          ... on UnclassifiedAlert {
-            count
-          }
-        }
-      }
-    }
-  }
-`;
+// DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const now = new Date();
-  const { data } = await query<HomePageDataQuery>({
-    query: HOME_PAGE_QUERY,
-    variables: { year: now.getFullYear(), month: now.getMonth() + 1 },
-  });
+  const today = jstToday(); // 絶対時刻（実行環境TZに依存する生の Date）
+  // year/month は必ず jstDateParts で取り出す。today.getFullYear()/getMonth() は
+  // 実行環境TZ（Vercel=UTC）に引きずられるため使わない（Global Constraint 5, spec 移行H3）。
+  const { year, month } = jstDateParts(today);
 
-  if (!data) throw new Error("データの取得に失敗しました");
+  const [monthlySummary, transactions, notifications] = await Promise.all([
+    loadMonthlySummaryView(db, year, month),
+    loadRecentTransactions(db, 5),
+    loadUnreadNotifications(db, 5),
+  ]);
 
-  const { monthlySummary, transactions, notifications } = data;
-
-  // 今月の経過率（理想ペースライン位置）
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const idealPacePercent = Math.round((now.getDate() / daysInMonth) * 100);
-
-  const notificationNodes = (notifications.nodes ?? []).filter((n) => n !== null);
+  // 今月の経過率（理想ペースライン位置）。JST基準で算出する
+  const daysInMonth = jstDaysInMonth(year, month);
+  const idealPacePercent = Math.round((jstDayOfMonth(today) / daysInMonth) * 100);
 
   return (
     <main className="min-h-screen">
       <div className="max-w-md mx-auto px-4 py-8 flex flex-col gap-6">
         <header>
           <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-            {now.getFullYear()}年{now.getMonth() + 1}月
+            {year}年{month}月
           </p>
           <h1 className="text-2xl font-bold text-foreground mt-1">かけいぼ</h1>
         </header>
-        {notificationNodes.length > 0 && (
-          <NotificationList notifications={notificationNodes} />
-        )}
+        {notifications.length > 0 && <NotificationList notifications={notifications} />}
         <SummaryCard
           totalAmount={monthlySummary.totalAmount}
           budgetAmount={monthlySummary.budgetAmount}
           remainingAmount={monthlySummary.remainingAmount}
         />
-        <BudgetList
-          breakdowns={monthlySummary.categoryBreakdowns}
-          idealPacePercent={idealPacePercent}
-        />
-        <RecentTransactions transactions={(transactions.nodes ?? []).filter((t) => t !== null)} />
+        <BudgetList breakdowns={monthlySummary.categoryBreakdowns} idealPacePercent={idealPacePercent} />
+        <RecentTransactions transactions={transactions} />
       </div>
     </main>
   );

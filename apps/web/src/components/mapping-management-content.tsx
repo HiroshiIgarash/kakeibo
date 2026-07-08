@@ -1,63 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import { useRouter } from "next/navigation";
+import { upsertStoreMapping, deleteStoreMapping } from "@/actions/mappings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ────────────────────────────────────────────────────────────────
-// GraphQL
-// ────────────────────────────────────────────────────────────────
-const MAPPINGS_QUERY = gql`
-  query StoreMappingsManagement {
-    storeMappings {
-      id
-      storeName
-      categoryId
-      category {
-        id
-        name
-        color
-      }
-    }
-    categories {
-      id
-      name
-    }
-  }
-`;
-
-const UPDATE_STORE_MAPPING = gql`
-  mutation UpdateStoreMappingMutation($input: UpdateStoreMappingInput!) {
-    updateStoreMapping(input: $input) {
-      storeMapping {
-        id
-        storeName
-        categoryId
-        category {
-          id
-          name
-          color
-        }
-      }
-      errors
-    }
-  }
-`;
-
-const DELETE_STORE_MAPPING = gql`
-  mutation DeleteStoreMappingMutation($input: DeleteStoreMappingInput!) {
-    deleteStoreMapping(input: $input) {
-      storeMapping {
-        id
-      }
-      errors
-    }
-  }
-`;
 
 // ────────────────────────────────────────────────────────────────
 // Types
@@ -67,14 +16,6 @@ type StoreMapping = {
   storeName: string;
   categoryId: string;
   category: { id: string; name: string; color?: string | null };
-};
-
-type UpdateStoreMappingData = {
-  updateStoreMapping: { storeMapping: StoreMapping | null; errors: string[] };
-};
-
-type DeleteStoreMappingData = {
-  deleteStoreMapping: { storeMapping: { id: string } | null; errors: string[] };
 };
 
 type CategoryOption = { id: string; name: string };
@@ -89,36 +30,30 @@ function AddMappingForm({
   categories: CategoryOption[];
   onDone: () => void;
 }) {
+  const router = useRouter();
   const [storeName, setStoreName] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const [upsert, { loading }] = useMutation<UpdateStoreMappingData>(UPDATE_STORE_MAPPING, {
-    refetchQueries: [{ query: MAPPINGS_QUERY }],
-    onCompleted(data) {
-      const errors = data?.updateStoreMapping?.errors ?? [];
-      if (errors.length > 0) {
-        setError(errors.join(", "));
-      } else {
-        onDone();
-      }
-    },
-    onError() { setError("保存に失敗しました"); },
-  });
-
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!storeName.trim()) { setError("店名を入力してください"); return; }
     if (!categoryId) { setError("カテゴリを選択してください"); return; }
     setError(null);
-    upsert({ variables: { input: { storeName: storeName.trim(), categoryId } } });
+    setLoading(true);
+    const result = await upsertStoreMapping({ storeName: storeName.trim(), categoryId });
+    setLoading(false);
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    router.refresh();
+    onDone();
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4 bg-muted/30 rounded-lg border border-border">
       <p className="text-sm font-medium">新規マッピング</p>
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-muted-foreground">店名（iPhoneショートカットの送信値と一致）</span>
+        <span className="text-xs text-muted-foreground">店名（メール取り込み時の店名と一致）</span>
         <input
           type="text"
           value={storeName}
@@ -163,29 +98,30 @@ function MappingRow({
   mapping: StoreMapping;
   categories: CategoryOption[];
 }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [categoryId, setCategoryId] = useState(mapping.categoryId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const [upsert, { loading: updating }] = useMutation<UpdateStoreMappingData>(UPDATE_STORE_MAPPING, {
-    refetchQueries: [{ query: MAPPINGS_QUERY }],
-    onCompleted(data) {
-      const errors = data?.updateStoreMapping?.errors ?? [];
-      if (errors.length > 0) {
-        setError(errors.join(", "));
-      } else {
-        setEditing(false);
-        setError(null);
-      }
-    },
-    onError() { setError("保存に失敗しました"); },
-  });
+  async function handleUpdate() {
+    setUpdating(true);
+    const result = await upsertStoreMapping({ storeName: mapping.storeName, categoryId });
+    setUpdating(false);
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    setEditing(false);
+    router.refresh();
+  }
 
-  const [remove, { loading: deleting }] = useMutation<DeleteStoreMappingData>(DELETE_STORE_MAPPING, {
-    refetchQueries: [{ query: MAPPINGS_QUERY }],
-    onError() { setError("削除に失敗しました"); },
-  });
+  async function handleRemove() {
+    setDeleting(true);
+    const result = await deleteStoreMapping({ id: mapping.id });
+    setDeleting(false);
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    router.refresh();
+  }
 
   if (editing) {
     return (
@@ -218,7 +154,7 @@ function MappingRow({
             type="button"
             size="sm"
             disabled={updating}
-            onClick={() => upsert({ variables: { input: { storeName: mapping.storeName, categoryId } } })}
+            onClick={handleUpdate}
           >
             {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           </Button>
@@ -244,7 +180,7 @@ function MappingRow({
             type="button"
             variant="destructive"
             size="sm"
-            onClick={() => remove({ variables: { input: { id: mapping.id } } })}
+            onClick={handleRemove}
             disabled={deleting}
           >
             {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : "削除"}
@@ -289,19 +225,13 @@ type Props = {
 
 export function MappingManagementContent({ initialMappings, initialCategories }: Props) {
   const [adding, setAdding] = useState(false);
-
-  const { data } = useQuery<{ storeMappings: StoreMapping[]; categories: CategoryOption[] }>(
-    MAPPINGS_QUERY,
-    { fetchPolicy: "cache-and-network" }
-  );
-
-  const mappings = data?.storeMappings ?? initialMappings;
-  const categories = data?.categories ?? initialCategories;
+  const mappings = initialMappings;
+  const categories = initialCategories;
 
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
-        店名とカテゴリの対応ルールを管理します。iPhoneショートカットから送信された店名がここで登録済みの場合、自動でカテゴリが割り当てられます。
+        店名とカテゴリの対応ルールを管理します。メール取り込み時の店名がここで登録済みの場合、自動でカテゴリが割り当てられます。
       </p>
 
       <div className="flex justify-end">

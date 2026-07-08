@@ -1,30 +1,12 @@
-import { query } from "@/lib/apollo-client";
-import { gql } from "@apollo/client";
+import { db } from "@/db/client";
+import { loadTransactionsByMonth, loadMonthlySummaryView } from "@/lib/queries";
 import { redirect } from "next/navigation";
+import { jstToday, jstDateParts } from "@/lib/dates";
 import { MonthNavigator } from "@/components/month-navigator";
 import { CalendarPageContent } from "@/components/calendar-page-content";
 
-const CALENDAR_PAGE_QUERY = gql`
-  query CalendarPage($year: Int!, $month: Int!) {
-    transactions(year: $year, month: $month, first: 500) {
-      nodes {
-        id
-        amount
-        storeName
-        purchasedAt
-        memo
-        category {
-          id
-          name
-          color
-        }
-      }
-    }
-    monthlySummary(year: $year, month: $month) {
-      budgetAmount
-    }
-  }
-`;
+// DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
+export const dynamic = "force-dynamic";
 
 type Transaction = {
   id: string;
@@ -35,11 +17,6 @@ type Transaction = {
   category?: { id: string; name: string; color?: string | null } | null;
 };
 
-type QueryResult = {
-  transactions: { nodes: (Transaction | null)[] };
-  monthlySummary: { budgetAmount: number };
-};
-
 export default async function CalendarPage(
   props: PageProps<"/calendar/[year]/[month]">
 ) {
@@ -47,9 +24,8 @@ export default async function CalendarPage(
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10);
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const now = jstToday();
+  const { year: currentYear, month: currentMonth } = jstDateParts(now);
 
   const isFuture =
     year > currentYear || (year === currentYear && month > currentMonth);
@@ -58,15 +34,11 @@ export default async function CalendarPage(
     redirect(`/calendar/${currentYear}/${currentMonth}`);
   }
 
-  const { data } = await query<QueryResult>({
-    query: CALENDAR_PAGE_QUERY,
-    variables: { year, month },
-  });
-
-  const transactions = (data?.transactions.nodes ?? []).filter(
-    (t): t is Transaction => t !== null
-  );
-  const budgetAmount = data?.monthlySummary.budgetAmount ?? 0;
+  const [transactions, summary] = await Promise.all([
+    loadTransactionsByMonth(db, year, month),
+    loadMonthlySummaryView(db, year, month),
+  ]);
+  const budgetAmount = summary.budgetAmount;
 
   return (
     <main className="min-h-screen">

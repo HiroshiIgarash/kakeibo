@@ -1,48 +1,14 @@
-import { query } from "@/lib/apollo-client";
-import { gql } from "@apollo/client";
+import { db } from "@/db/client";
+import { loadTransactionsByMonth, loadMonthlySummaryView } from "@/lib/queries";
 import { redirect } from "next/navigation";
+import { jstToday, jstDateParts, jstDaysInMonth, jstDayOfMonth } from "@/lib/dates";
 import { MonthNavigator } from "@/components/month-navigator";
 import { TransactionsView } from "@/components/transactions-view";
 import { BudgetList } from "@/components/budget-list";
 import { SummaryCard } from "@/components/summary-card";
-import type { TransactionsPageQuery } from "@/gql/graphql";
 
-const TRANSACTIONS_PAGE_QUERY = gql`
-  query TransactionsPage($year: Int!, $month: Int!) {
-    transactions(year: $year, month: $month, first: 500) {
-      nodes {
-        id
-        amount
-        storeName
-        purchasedAt
-        memo
-        category {
-          id
-          name
-          color
-        }
-      }
-    }
-    monthlySummary(year: $year, month: $month) {
-      totalAmount
-      budgetAmount
-      remainingAmount
-      categoryBreakdowns {
-        categoryId
-        categoryName
-        amount
-        paceStatus
-        budgetAmount
-        remainingAmount
-        dailyAmount
-      }
-    }
-  }
-`;
-
-type Transaction = NonNullable<
-  NonNullable<TransactionsPageQuery["transactions"]["nodes"]>[number]
->;
+// DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
+export const dynamic = "force-dynamic";
 
 export default async function TransactionsPage(
   props: PageProps<"/transactions/[year]/[month]">
@@ -51,9 +17,8 @@ export default async function TransactionsPage(
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10);
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const now = jstToday();
+  const { year: currentYear, month: currentMonth } = jstDateParts(now);
 
   const isFuture =
     year > currentYear || (year === currentYear && month > currentMonth);
@@ -62,24 +27,16 @@ export default async function TransactionsPage(
     redirect(`/transactions/${currentYear}/${currentMonth}`);
   }
 
-  const { data } = await query<TransactionsPageQuery>({
-    query: TRANSACTIONS_PAGE_QUERY,
-    variables: { year, month },
-  });
-
-  if (!data) throw new Error("データの取得に失敗しました");
-
-  const transactions = (data.transactions.nodes ?? []).filter(
-    (t): t is Transaction => t !== null
-  );
-
-  const { monthlySummary } = data;
+  const [transactions, monthlySummary] = await Promise.all([
+    loadTransactionsByMonth(db, year, month),
+    loadMonthlySummaryView(db, year, month),
+  ]);
 
   // 今月なら今日の経過率、過去月は完了しているので100%
   const isCurrentMonth = year === currentYear && month === currentMonth;
-  const daysInMonth = new Date(year, month, 0).getDate();
+  const daysInMonth = jstDaysInMonth(year, month);
   const idealPacePercent = isCurrentMonth
-    ? Math.round((now.getDate() / daysInMonth) * 100)
+    ? Math.round((jstDayOfMonth(now) / daysInMonth) * 100)
     : 100;
 
   return (

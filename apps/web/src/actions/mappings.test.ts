@@ -10,7 +10,8 @@ vi.mock("@/db/client", () => ({ db: testDb }));
 
 const { categories, transactions, storeCategoryMappings, unclassifiedAlerts, notifications } =
   await import("@/db/schema");
-const { upsertStoreMapping, deleteStoreMapping, normalizeStoreName } = await import("./mappings");
+const { upsertStoreMapping, deleteStoreMapping } = await import("./mappings");
+const { normalizeStoreName } = await import("@/lib/store-name");
 
 afterAll(async () => {
   await teardown();

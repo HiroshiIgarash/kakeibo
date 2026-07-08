@@ -1,61 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@base-ui/react/dialog";
 import { X, Trash2 } from "lucide-react";
-import {
-  TransactionSource,
-  type CreateTransactionMutationMutation,
-  type CreateTransactionMutationMutationVariables,
-  type UpdateTransactionMutationMutation,
-  type UpdateTransactionMutationMutationVariables,
-  type DeleteTransactionMutationMutation,
-  type DeleteTransactionMutationMutationVariables,
-} from "@/gql/graphql";
-
-const CATEGORIES_QUERY = gql`
-  query CategoriesForForm {
-    categories {
-      id
-      name
-      color
-    }
-  }
-`;
-
-const CREATE_TRANSACTION = gql`
-  mutation CreateTransactionMutation($input: CreateTransactionInput!) {
-    createTransaction(input: $input) {
-      transaction {
-        id
-      }
-      errors
-    }
-  }
-`;
-
-const UPDATE_TRANSACTION = gql`
-  mutation UpdateTransactionMutation($input: UpdateTransactionInput!) {
-    updateTransaction(input: $input) {
-      transaction {
-        id
-      }
-      errors
-    }
-  }
-`;
-
-const DELETE_TRANSACTION = gql`
-  mutation DeleteTransactionMutation($input: DeleteTransactionInput!) {
-    deleteTransaction(input: $input) {
-      success
-      errors
-    }
-  }
-`;
+import { createTransaction, updateTransaction, deleteTransaction } from "@/actions/transactions";
+import { getCategoryOptions } from "@/actions/categories";
 
 export type TransactionForEdit = {
   id: string;
@@ -69,10 +19,6 @@ type Category = {
   id: string;
   name: string;
   color?: string | null;
-};
-
-type CategoriesQueryResult = {
-  categories: Category[];
 };
 
 type Props = {
@@ -115,93 +61,52 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const { data: catData } = useQuery<CategoriesQueryResult>(CATEGORIES_QUERY);
-  const categories: Category[] = catData?.categories ?? [];
+  const [categories, setCategories] = useState<Category[]>([]);
+  useEffect(() => {
+    let active = true;
+    getCategoryOptions().then((cats) => { if (active) setCategories(cats); });
+    return () => { active = false; };
+  }, []);
 
-  const [createTransaction, { loading: creating }] = useMutation<
-    CreateTransactionMutationMutation,
-    CreateTransactionMutationMutationVariables
-  >(CREATE_TRANSACTION);
-  const [updateTransaction, { loading: updating }] = useMutation<
-    UpdateTransactionMutationMutation,
-    UpdateTransactionMutationMutationVariables
-  >(UPDATE_TRANSACTION);
-  const [deleteTransaction, { loading: deleting }] = useMutation<
-    DeleteTransactionMutationMutation,
-    DeleteTransactionMutationMutationVariables
-  >(DELETE_TRANSACTION);
-
-  const loading = creating || updating || deleting;
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingState, setDeletingState] = useState(false);
+  const loading = submitting || deletingState;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors([]);
-
     const parsedAmount = parseInt(amount, 10);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setErrors(["金額は1以上の数値を入力してください"]);
       return;
     }
-
+    setSubmitting(true);
     try {
-      if (isEdit && transaction) {
-        const { data } = await updateTransaction({
-          variables: {
-            input: {
-              id: transaction.id,
-              storeName: storeName.trim(),
-              amount: parsedAmount,
-              purchasedAt,
-              categoryId: categoryId || null,
-            },
-          },
-        });
-        const errs: string[] = data?.updateTransaction?.errors ?? [];
-        if (errs.length > 0) {
-          setErrors(errs);
-          return;
-        }
-      } else {
-        const { data } = await createTransaction({
-          variables: {
-            input: {
-              storeName: storeName.trim(),
-              amount: parsedAmount,
-              purchasedAt,
-              categoryId: categoryId || null,
-              source: TransactionSource.Manual,
-            },
-          },
-        });
-        const errs: string[] = data?.createTransaction?.errors ?? [];
-        if (errs.length > 0) {
-          setErrors(errs);
-          return;
-        }
-      }
-
+      const result = isEdit && transaction
+        ? await updateTransaction({ id: transaction.id, storeName: storeName.trim(), amount: parsedAmount, purchasedAt, categoryId: categoryId || null })
+        : await createTransaction({ storeName: storeName.trim(), amount: parsedAmount, purchasedAt, categoryId: categoryId || null });
+      if (result.errors.length > 0) { setErrors(result.errors); return; }
       router.refresh();
       onClose();
     } catch {
       setErrors(["エラーが発生しました"]);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
     if (!transaction) return;
+    setDeletingState(true);
     try {
-      const { data } = await deleteTransaction({
-        variables: { input: { id: transaction.id } },
-      });
-      const errs: string[] = data?.deleteTransaction?.errors ?? [];
-      if (errs.length > 0) {
-        setErrors(errs);
-        return;
-      }
+      const result = await deleteTransaction({ id: transaction.id });
+      if (result.errors.length > 0) { setErrors(result.errors); return; }
       router.refresh();
       onClose();
     } catch {
       setErrors(["削除に失敗しました"]);
+    } finally {
+      setDeletingState(false);
     }
   };
 
@@ -344,10 +249,10 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
             <button
               type="button"
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deletingState}
               className="flex-1 py-3 rounded-xl bg-rose-500 text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
             >
-              {deleting ? "削除中..." : "削除する"}
+              {deletingState ? "削除中..." : "削除する"}
             </button>
           </div>
         )}

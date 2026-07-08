@@ -1,4 +1,4 @@
-import { Bell, Tag, GitBranch, Mail, ChevronRight } from "lucide-react";
+import { Bell, Tag, GitBranch, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
@@ -27,11 +27,6 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     icon: GitBranch,
     description: "店名とカテゴリの自動分類ルール",
     href: "/settings/mappings",
-  },
-  {
-    label: "メール通知",
-    icon: Mail,
-    description: "アラートメールの送信先・頻度",
   },
 ];
 
