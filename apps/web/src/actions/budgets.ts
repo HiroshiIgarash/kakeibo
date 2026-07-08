@@ -5,13 +5,22 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { budgets } from "@/db/schema";
+import { monthKey } from "@/lib/dates";
 
 export type ActionResult = { errors: string[] };
 
 const upsertSchema = z.object({
   categoryId: z.string().min(1),
   amount: z.number().int().positive("金額は1以上で入力してください"),
-  month: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "月の形式が不正です"),
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "月の形式が不正です")
+    // budgets.month は 'YYYY-MM-01' の月初キー規約（monthKey / monthly-summary / alerts のクエリ前提）。
+    // 非01日の入力は unique 制約 (categoryId, month) をすり抜け同月2予算になるため、月初へ正規化する。
+    .transform((v) => {
+      const [year, month] = v.split("-").map(Number);
+      return monthKey(year, month);
+    }),
 });
 const deleteSchema = z.object({ id: z.string().min(1) });
 

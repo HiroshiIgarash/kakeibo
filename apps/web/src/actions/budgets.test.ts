@@ -40,6 +40,16 @@ describe("upsertBudget", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("非01日の入力は月初キー 'YYYY-MM-01' に正規化して保存される", async () => {
+    expect((await upsertBudget({ categoryId: String(catId), amount: 1000, month: "2026-07-15" })).errors).toEqual([]);
+    // 同月の別日入力も同一レコードへの upsert として扱われる
+    expect((await upsertBudget({ categoryId: String(catId), amount: 3000, month: "2026-07-20" })).errors).toEqual([]);
+    const rows = await testDb.select().from(budgets);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].month).toBe("2026-07-01");
+    expect(rows[0].amount).toBe(3000);
+  });
+
   it("異なる月なら別レコードとして作成される", async () => {
     await upsertBudget({ categoryId: String(catId), amount: 1000, month: "2026-07-01" });
     await upsertBudget({ categoryId: String(catId), amount: 1500, month: "2026-08-01" });
