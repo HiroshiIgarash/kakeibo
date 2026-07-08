@@ -1,143 +1,78 @@
 # かけいぼ プロジェクト
 
 ## 概要
-個人用家計簿アプリ。iPhoneショートカットでクレカ利用を即日記録する。
-食費の予算オーバーを防ぐことがコアの目的。
-Rails（API） + Next.js + GraphQL構成。
-
-## 開発ルール
-- TDDで進める（テストを先に書いてRedを確認 → 実装 → Green）
-  - **必ずFactory → spec → 実装の順番を守る。実装を先に書いてはいけない**
-- コマンドは1つずつ提示して、私が実行してから次に進む
-- コードを見せる前に必ず概念の説明を入れる
-- Rails・GraphQL学習中なので、なぜそのコマンド・コードを書くかを都度説明する
-- 各Chapterの冒頭で🎯目的・📚学ぶこと・🔑概念解説を示してから実装に入る
-- 各Chapterの末尾に✅まとめを示す（📌やったこと・🔑学んだ概念・🔗前後のつながり）
-
-## 進捗管理ルール
-- Chapterが完了したら、✅まとめを出力する
-- まとめを出力したら「コードレビューを行いますか？」と確認を取る
-  - 行う場合は `/everything-claude-code:code-review` スキルを実行する
-  - レビュー結果に対応が必要な指摘があれば対処してから次へ進む
-- コードレビュー完了後（またはスキップ後）、「Chapter X-X を完了にしてよいですか？」と確認を取る
-- 確認が取れたらCLAUDE.mdを更新する
-- 更新後、「コミットしてよいですか？」と確認を取り、OKならコミットまで行う
-
-## Claude Codeの行動ルール（最重要）
-- 基本的に、コマンドの実行・ファイルの作成・編集は**自分でやらない**
-- やることは「次に何をするか」「なぜそうするか」を説明することだけ
-- ただし、ユーザーから明示的に「やって」「実行して」と頼まれた場合はコマンドを実行してよい
-- 1つ説明したら必ず止まって、ユーザーが「やった」「完了」と言うまで次に進まない
-- 進め方の例：
-  - Claude：「次は○○というファイルを作ります。理由は〜〜。以下のコマンドを入力してください：`<コマンド>`」
-  - ユーザー：「やった」
-  - Claude：「確認できました。次は〜〜」
+個人用・単一ユーザーの家計簿アプリ。クレカ利用通知メールを Gmail 自動転送 → CloudMailin
+Webhook 経由で受信し、当日中に自動で取引記録する。食費の予算オーバーを防ぐことがコア目的。
+Next.js フルスタック（App Router + Drizzle ORM）構成で、旧 Rails/GraphQL 構成からは全面移行済み。
 
 ## 技術スタック
-- Backend: Ruby on Rails最新版（APIモード）+ graphql-ruby
-- Frontend: Next.js（App Router）
-- DB: PostgreSQL
-- Test: RSpec + FactoryBot + Shoulda Matchers
-- Enum管理: enumrize gem
-- 非同期: Active Job + Sidekiq
-- ファイル管理: Active Storage
-- メール: Action Mailer
-- インフラ: Railway（Rails + PostgreSQL + Sidekiq）+ Vercel（Next.js）
+- フルスタック: Next.js 16（App Router / RSC / Route Handler / Server Actions）
+- ORM: Drizzle ORM（`postgres-js` ドライバ、Supabase pooler 経由）
+- DB: Supabase PostgreSQL（RLS 不使用・サーバー側接続のみ）
+- バリデーション: zod
+- メール受信: CloudMailin（Normalized JSON Webhook）
+- 認証: 共有パスワード + HMAC 署名 cookie（Web Crypto API、`src/proxy.ts`。Next.js 16 で
+  `middleware.ts` から改称）
+- テスト: Vitest（純粋ロジックのユニット + `@electric-sql/pglite` による DB 統合テスト）
+- ホスティング: Vercel（apps/web を Root Directory に）
 
 ## ディレクトリ構成
-- apps/api/        → Rails
-- apps/web/        → Next.js
-- docs/            → 要件定義書・ロードマップ
+- apps/web/        → Next.js フルスタックアプリ（唯一のアプリ）
+  - src/db/          → Drizzle スキーマ・クライアント
+  - src/lib/         → 純粋ロジック（budget-pace / monthly-summary / alerts / email-parser /
+    store-name / dates）
+  - src/actions/     → Server Actions（更新系）
+  - src/app/api/inbound-email/ → メール受信 Webhook
+  - src/test/        → pglite テスト基盤
+  - scripts/         → 1回きりの移行スクリプト等
+- apps/api/        → 旧 Rails アプリ（移行残作業1・2の完了後に削除予定。下記「移行残作業」参照）
+- docs/            → 要件定義書・設計書・実装計画
 
-## 現在の進捗
-### Part 0: 環境構築・設計
-- [x] Chapter 0-1: プロジェクトのセットアップ
-- [x] Chapter 0-2: Gitの初期設定とGitHub連携
-- [x] Chapter 0-3: Claude Codeの設定（MCP・Skills）
+## アーキテクチャ要点
+- 取引記録・アラート判定は「取引 insert と同一DBトランザクション内で同期実行」する
+  （旧 Sidekiq/cron は廃止。支出発生時にのみ判定すればバッチと同結果、という設計根拠）。
+- 日付演算（月初・末日・経過日数）は Asia/Tokyo 固定で `src/lib/dates.ts` に集約する。
+  実行環境TZ（Vercel は UTC）に依存させない。
+- `db/client.ts` はアプリ実行時の pooler 接続（`prepare: false` 必須）。DDL は `DIRECT_URL` 直結。
+- 店舗名の正規化（全角/半角統一・トリム等）は `src/lib/store-name.ts` の `normalizeStoreName`
+  に集約する（マッピング画面の Server Action 等から利用）。
 
-### Part 1: Railsの基礎（モデル・REST API）
-- [x] Chapter 1-1: データベース設計とマイグレーション
-- [x] Chapter 1-2: Categoryモデル ― STIと階層構造
-- [x] Chapter 1-3: Transactionモデル ― enumrize・Scope・カスタムバリデータ
-- [x] Chapter 1-4: その他モデルの実装
-- [x] Chapter 1-5: 通知モデル ― ポリモーフィック関連
-- [x] Chapter 1-6: ショートカット連携API（REST）
+## 開発ルール
+- TDD で進める（テスト先行で Red を確認 → 実装 → Green）。
+  - 純粋ロジック（`src/lib/*`）は Vitest のユニットテスト、Server Actions / Webhook は
+    pglite 統合テストでカバーする。
+- コミットは Conventional Commits 形式（feat: / fix: / chore: / test: / refactor: / docs:）。
+- main への直接コミットは避け、作業ブランチを切る。
+- 外部入力（メール本文・フォーム）は必ず検証し、失敗ケースもテストで押さえる。
 
-### Part 2: GraphQL基盤
-- [x] Chapter 2-1: graphql-rubyのセットアップとSchema設計
-- [x] Chapter 2-2: InterfaceとBaseクラスの設計
-- [x] Chapter 2-3: EnumとCustom Scalarの実装
-- [x] Chapter 2-4: TypeクラスとInput Objectの実装
-- [x] Chapter 2-5: Dataloaderの実装 ― N+1問題を解決する
+## 移行残作業
+Rails → Next.js フルスタックへのコード移行（アプリ実装）は完了しているが、以下のユーザー実行作業が
+未完了のため `apps/api` はまだリポジトリに残っている。
 
-### Part 3: GraphQL Query実装
-- [x] Chapter 3-1: シンプルなQueryの実装
-- [x] Chapter 3-2: Resolverを使った複雑なQuery ― transactions
-- [x] Chapter 3-3: ConnectionによるPagination
-- [x] Chapter 3-4: Serviceオブジェクトを使った集計Query
-- [x] Chapter 3-5: Union型を使った通知Query
+1. **Supabase セットアップ + 設定データ移行**: Supabase プロジェクトを作成し、
+   `scripts/migrate-settings.ts` を実行して categories / budgets / store_category_mappings /
+   budget_alert_settings / pace_alert_settings をローカル Rails DB（`RAILS_DATABASE_URL`）から
+   Supabase（`DIRECT_URL`）へ移行する。
+2. **`apps/api` 削除**: 残作業1の完了後に実施する。手順は
+   `docs/superpowers/plans/2026-07-09-migration-C-webhook-cleanup-deploy.md` の Task 6 を参照
+   （M2 ガード: この順序を逆にするとローカル Rails DB を起動できず移行スクリプトが動かせなくなる
+   ため、Task 6 は残作業1の完了を待って実行すること）。
+3. **本番環境セットアップ**: Vercel / CloudMailin / Gmail 自動転送の設定。手順は同計画書の
+   Task 9〜12 を参照。
 
-### Part 4: GraphQL Mutation実装
-- [x] Chapter 4-1: Transaction系Mutationの実装
-- [x] Chapter 4-2: Category・Budget系Mutationの実装
-- [x] Chapter 4-3: 通知・マッピング系Mutationの実装
-- [x] Chapter 4-4: Active Storage ― 写真添付Mutationの実装
+## 進捗
+Rails → Next.js フルスタックへのコード移行は完了。上記「移行残作業」（デプロイ関連のユーザー作業と
+`apps/api` 削除）を残すのみ。以降の機能追加は apps/web 内で行う。
 
-### Part 5: Rails応用機能
-- [x] Chapter 5-1: Action Mailer ― 予算アラートメール
-- [x] Chapter 5-2: Active Job + Sidekiq ― 非同期処理
-- [~] Chapter 5-3: Delegated Types ― ポリモーフィックのリファクタリング（スキップ：現設計で十分なため）
-- [x] Chapter 5-4: GraphQL Subscription + Action Cable
+参照: `docs/superpowers/specs/2026-07-09-rails-to-nextjs-migration-design.md`（移行設計書＝仕様の正）
 
-### Part 6: フロントエンド（Next.js）
-- [x] Chapter 6-1: GraphQLクライアントのセットアップ
-- [x] Chapter 6-2: ホーム画面の実装
-- [x] Chapter 6-3: 支出一覧・カレンダー画面の実装
-- [x] Chapter 6-4: Mutation・ボトムシートの実装
-- [x] Chapter 6-5: 予算詳細画面の実装
-- [x] Chapter 6-6: アラート設定画面の実装
-- [x] Chapter 6-7: カテゴリ・マッピング管理画面の実装
-- [x] Chapter 6-8: DailyAllowance Query ― BudgetPaceCalculatorをGraphQLに繋ぐ
-- [x] Chapter 6-9: 月次サマリーメール ― Cron + Action Mailer
-- [ ] Chapter 6-10: メール通知設定画面 ― 設定の可視化
-
-### Part 7: 仕上げ・デプロイ
-- [ ] Chapter 7-1: credentials移行 ― ENV から Rails credentials へ
-- [ ] Chapter 7-2: Railwayへのデプロイ
-- [ ] Chapter 7-3: Vercelへのデプロイ
-- [ ] Chapter 7-4: 仕上げ ― @deprecatedと品質向上
-
-## メールアラート仕様（Chapter 5-2 実装予定）
-
-### 予算アラートメール
-- カテゴリごとに閾値を**2つまで**設定可能（例: 80% と 100%）
-- 各閾値を**超えた瞬間に1回だけ**送信
-- 月が変わったらリセット（翌月はまた送る）
-
-### ペースアラートメール
-- 日割りペース（理想消費率）に対する超過率を閾値として設定可能（例: 110%）
-- **送信開始日を設定可能**（例: 月の5日以降から有効 → 月初の誤送信を防ぐ）
-- **状態遷移ベース**で送信（GREEN/YELLOW → RED になった瞬間のみ）
-  - RED が続いている間は送らない
-  - RED → GREEN/YELLOW に回復 → また RED になったら送る
-- カテゴリごとにON/OFFで設定可能（固定費も設定次第で対象にできる）
-
-### テーブル設計
-
-**`budget_alert_settings`**（現 `alert_settings` をリネーム＋拡張）
-- `category_id`, `is_active`, `threshold_1`, `threshold_2`（nullable）
-
-**`pace_alert_settings`**（新規）
-- `category_id`, `is_active`, `threshold`（例: 110）, `active_from_day`（例: 5）
-
-**`budget_alerts`**（既存、カラム追加）
-- `month` カラム追加、`(category_id, month, threshold)` にユニーク制約
-- 重複防止 + アプリ内通知のnotifiableを兼ねる
-
-**`pace_alerts`**（新規）
-- `category_id`, `month`, `triggered_at`, `recovered_at`（null = まだRED）
-- アプリ内通知のnotifiableを兼ねる
+## 環境変数
+- `DATABASE_URL`     : Supabase pooler（transaction-mode, port 6543）。実行時接続、`prepare: false`
+- `DIRECT_URL`       : Supabase 直結（port 5432）。drizzle-kit の DDL 用
+- `AUTH_PASSWORD`    : ログイン共有パスワード
+- `AUTH_COOKIE_SECRET`: 認証 cookie の HMAC 署名鍵
+- `INBOUND_TOKEN`    : CloudMailin Webhook の URL トークン
 
 ## 参照ドキュメント
-- 要件定義書: docs/要件定義書_v6.md
-- ロードマップ: docs/開発ロードマップ.md
+- 移行設計書: docs/superpowers/specs/2026-07-09-rails-to-nextjs-migration-design.md
+- 実装計画: docs/superpowers/plans/
