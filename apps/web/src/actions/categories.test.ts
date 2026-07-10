@@ -8,7 +8,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const { db: testDb, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
-const { categories, transactions } = await import("@/db/schema");
+const { categories, transactions, budgetAlerts } = await import("@/db/schema");
 const { createCategory, updateCategory, deleteCategory } = await import("./categories");
 
 afterAll(async () => {
@@ -16,7 +16,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  for (const t of [transactions, categories]) await testDb.delete(t);
+  for (const t of [transactions, budgetAlerts, categories]) await testDb.delete(t);
 });
 
 describe("createCategory", () => {
@@ -102,6 +102,16 @@ describe("deleteCategory", () => {
   it("取引が紐づくカテゴリは削除できない（spec §4.3）", async () => {
     const [cat] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
     await testDb.insert(transactions).values({ amount: 1, storeName: "A", purchasedAt: new Date(), source: "manual", categoryId: cat.id });
+    const res = await deleteCategory({ id: String(cat.id) });
+    expect(res.errors.length).toBeGreaterThan(0);
+    expect(await testDb.select().from(categories)).toHaveLength(1);
+  });
+
+  it("budgetAlertsが紐づくカテゴリは削除できない（spec §4.3）", async () => {
+    const [cat] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    await testDb
+      .insert(budgetAlerts)
+      .values({ categoryId: cat.id, month: "2026-07-01", threshold: 80, usagePercent: 85 });
     const res = await deleteCategory({ id: String(cat.id) });
     expect(res.errors.length).toBeGreaterThan(0);
     expect(await testDb.select().from(categories)).toHaveLength(1);

@@ -9,6 +9,7 @@ import {
   transactions,
   budgets,
   budgetAlertSettings,
+  budgetAlerts,
   paceAlertSettings,
   paceAlerts,
   storeCategoryMappings,
@@ -108,6 +109,7 @@ async function hasReferences(tx: DbTransaction, categoryId: number): Promise<boo
       .where(eq(paceAlertSettings.categoryId, categoryId))
       .limit(1),
     tx.select({ id: paceAlerts.id }).from(paceAlerts).where(eq(paceAlerts.categoryId, categoryId)).limit(1),
+    tx.select({ id: budgetAlerts.id }).from(budgetAlerts).where(eq(budgetAlerts.categoryId, categoryId)).limit(1),
     tx
       .select({ id: storeCategoryMappings.id })
       .from(storeCategoryMappings)
