@@ -6,6 +6,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { X, Trash2 } from "lucide-react";
 import { createTransaction, updateTransaction, deleteTransaction } from "@/actions/transactions";
 import { getCategoryOptions } from "@/actions/categories";
+import type { CategoryOption } from "@/lib/queries";
 
 export type TransactionForEdit = {
   id: string;
@@ -15,11 +16,19 @@ export type TransactionForEdit = {
   categoryId?: string | null;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  color?: string | null;
-};
+/** 子カテゴリ一覧を親名でグルーピングする（挿入順 = loader のソート順を保持） */
+function groupByParent(categories: CategoryOption[]): Map<string, CategoryOption[]> {
+  const grouped = new Map<string, CategoryOption[]>();
+  for (const cat of categories) {
+    const list = grouped.get(cat.parentName);
+    if (list) {
+      list.push(cat);
+    } else {
+      grouped.set(cat.parentName, [cat]);
+    }
+  }
+  return grouped;
+}
 
 type Props = {
   open: boolean;
@@ -61,7 +70,7 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   useEffect(() => {
     let active = true;
     getCategoryOptions().then((cats) => { if (active) setCategories(cats); });
@@ -190,10 +199,14 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
               className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-sm focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors appearance-none"
             >
               <option value="">未分類</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
+              {Array.from(groupByParent(categories)).map(([parentName, children]) => (
+                <optgroup key={parentName} label={parentName}>
+                  {children.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <svg

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { upsertStoreMapping, deleteStoreMapping } from "@/actions/mappings";
+import type { CategoryOption } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
@@ -18,7 +19,19 @@ type StoreMapping = {
   category: { id: string; name: string; color?: string | null };
 };
 
-type CategoryOption = { id: string; name: string };
+/** 子カテゴリ一覧を親名でグルーピングする（挿入順 = loader のソート順を保持） */
+function groupByParent(categories: CategoryOption[]): Map<string, CategoryOption[]> {
+  const grouped = new Map<string, CategoryOption[]>();
+  for (const cat of categories) {
+    const list = grouped.get(cat.parentName);
+    if (list) {
+      list.push(cat);
+    } else {
+      grouped.set(cat.parentName, [cat]);
+    }
+  }
+  return grouped;
+}
 
 // ────────────────────────────────────────────────────────────────
 // 新規追加フォーム
@@ -70,8 +83,12 @@ function AddMappingForm({
           onChange={(e) => setCategoryId(e.target.value)}
           className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+          {Array.from(groupByParent(categories)).map(([parentName, children]) => (
+            <optgroup key={parentName} label={parentName}>
+              {children.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
@@ -135,8 +152,12 @@ function MappingRow({
             className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             autoFocus
           >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+            {Array.from(groupByParent(categories)).map(([parentName, children]) => (
+              <optgroup key={parentName} label={parentName}>
+                {children.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

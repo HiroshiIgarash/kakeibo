@@ -4,26 +4,42 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { upsertStoreMapping } from "@/actions/mappings";
 import { createCategory } from "@/actions/categories";
-import type { UnclassifiedGroup, CategoryOption } from "@/lib/queries";
+import type { UnclassifiedGroup, CategoryOption, ParentCategoryOption } from "@/lib/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Loader2, Plus, Tag } from "lucide-react";
+
+/** 子カテゴリ一覧を親名でグルーピングする（挿入順 = loader のソート順を保持） */
+function groupByParent(categories: CategoryOption[]): Map<string, CategoryOption[]> {
+  const grouped = new Map<string, CategoryOption[]>();
+  for (const cat of categories) {
+    const list = grouped.get(cat.parentName);
+    if (list) {
+      list.push(cat);
+    } else {
+      grouped.set(cat.parentName, [cat]);
+    }
+  }
+  return grouped;
+}
 
 // ────────────────────────────────────────────────────────────────
 // カテゴリ選択パネル（新規カテゴリ作成込み）
 // ────────────────────────────────────────────────────────────────
 function CategoryPicker({
   categories,
+  parentOptions,
   onPick,
   busy,
 }: {
   categories: CategoryOption[];
+  parentOptions: ParentCategoryOption[];
   onPick: (categoryId: string) => void;
   busy: boolean;
 }) {
   const [creating, setCreating] = useState(false);
+  const [newParentId, setNewParentId] = useState(parentOptions[0]?.id ?? "");
   const [newName, setNewName] = useState("");
-  const [newKind, setNewKind] = useState<"variable" | "fixed">("variable");
   const [error, setError] = useState<string | null>(null);
   const [creatingBusy, setCreatingBusy] = useState(false);
 
@@ -33,9 +49,13 @@ function CategoryPicker({
       setError("カテゴリ名を入力してください");
       return;
     }
+    if (!newParentId) {
+      setError("親カテゴリを選択してください");
+      return;
+    }
     setError(null);
     setCreatingBusy(true);
-    const result = await createCategory({ name, kind: newKind, color: null });
+    const result = await createCategory({ name, parentId: newParentId });
     setCreatingBusy(false);
     if (result.errors.length > 0 || !result.id) {
       setError(result.errors.join(", ") || "カテゴリの作成に失敗しました");
@@ -46,66 +66,75 @@ function CategoryPicker({
   }
 
   return (
-    <div className="flex flex-col gap-2 pt-2">
-      <div className="flex flex-wrap gap-1.5">
-        {categories.map((c) => (
+    <div className="flex flex-col gap-3 pt-2">
+      {Array.from(groupByParent(categories)).map(([parentName, children]) => (
+        <div key={parentName} className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+            {parentName}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {children.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                disabled={busy}
+                onClick={() => onPick(c.id)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: c.color ?? "#6b7280" }}
+                />
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {parentOptions.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          先に設定画面で親カテゴリを作成してください
+        </p>
+      ) : (
+        <div>
           <button
-            key={c.id}
             type="button"
             disabled={busy}
-            onClick={() => onPick(c.id)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted transition-colors disabled:opacity-50"
+            onClick={() => setCreating((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
           >
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: c.color ?? "#6b7280" }}
-            />
-            {c.name}
+            <Plus className="w-3 h-3" />
+            新しいカテゴリ
           </button>
-        ))}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setCreating((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
-        >
-          <Plus className="w-3 h-3" />
-          新しいカテゴリ
-        </button>
-      </div>
 
-      {creating && (
-        <div className="flex flex-col gap-2 p-3 rounded-lg bg-muted/30 border border-border">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="カテゴリ名（例：食費）"
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            autoFocus
-          />
-          <div className="flex items-center justify-between">
-            <div className="flex gap-1">
-              {(["variable", "fixed"] as const).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setNewKind(k)}
-                  className={`rounded-full px-3 py-1 text-xs border transition-colors ${
-                    newKind === k
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {k === "variable" ? "変動費" : "固定費"}
-                </button>
-              ))}
+          {creating && (
+            <div className="flex flex-col gap-2 p-3 mt-2 rounded-lg bg-muted/30 border border-border">
+              <select
+                value={newParentId}
+                onChange={(e) => setNewParentId(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {parentOptions.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="カテゴリ名（例：外食）"
+                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                autoFocus
+              />
+              <div className="flex justify-end">
+                <Button type="button" size="sm" disabled={creatingBusy || busy} onClick={handleCreate}>
+                  {creatingBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "作成して分類"}
+                </Button>
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
             </div>
-            <Button type="button" size="sm" disabled={creatingBusy || busy} onClick={handleCreate}>
-              {creatingBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "作成して分類"}
-            </Button>
-          </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          )}
         </div>
       )}
     </div>
@@ -118,11 +147,13 @@ function CategoryPicker({
 function GroupRow({
   group,
   categories,
+  parentOptions,
   open,
   onToggle,
 }: {
   group: UnclassifiedGroup;
   categories: CategoryOption[];
+  parentOptions: ParentCategoryOption[];
   open: boolean;
   onToggle: () => void;
 }) {
@@ -160,7 +191,14 @@ function GroupRow({
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         )}
       </button>
-      {open && <CategoryPicker categories={categories} onPick={handlePick} busy={busy} />}
+      {open && (
+        <CategoryPicker
+          categories={categories}
+          parentOptions={parentOptions}
+          onPick={handlePick}
+          busy={busy}
+        />
+      )}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
@@ -172,9 +210,10 @@ function GroupRow({
 type Props = {
   groups: UnclassifiedGroup[];
   categories: CategoryOption[];
+  parentOptions: ParentCategoryOption[];
 };
 
-export function UnclassifiedQuickClassify({ groups, categories }: Props) {
+export function UnclassifiedQuickClassify({ groups, categories, parentOptions }: Props) {
   const [openStore, setOpenStore] = useState<string | null>(null);
   if (groups.length === 0) return null;
 
@@ -198,6 +237,7 @@ export function UnclassifiedQuickClassify({ groups, categories }: Props) {
             key={g.storeName}
             group={g}
             categories={categories}
+            parentOptions={parentOptions}
             open={openStore === g.storeName}
             onToggle={() => setOpenStore((v) => (v === g.storeName ? null : g.storeName))}
           />

@@ -4,6 +4,7 @@ import {
   loadRecentTransactions,
   loadUnclassifiedGroups,
   loadCategoryOptions,
+  loadParentCategoryOptions,
   loadFailedInboundEmails,
 } from "@/lib/queries";
 import { loadUnreadNotifications } from "@/lib/notifications";
@@ -24,15 +25,23 @@ export default async function Home() {
   // 実行環境TZ（Vercel=UTC）に引きずられるため使わない（Global Constraint 5, spec 移行H3）。
   const { year, month } = jstDateParts(today);
 
-  const [monthlySummary, transactions, notifications, unclassifiedGroups, categoryOptions, failedEmails] =
-    await Promise.all([
-      loadMonthlySummaryView(db, year, month),
-      loadRecentTransactions(db, 5),
-      loadUnreadNotifications(db, 5),
-      loadUnclassifiedGroups(db),
-      loadCategoryOptions(db),
-      loadFailedInboundEmails(db),
-    ]);
+  const [
+    monthlySummary,
+    transactions,
+    notifications,
+    unclassifiedGroups,
+    categoryOptions,
+    parentCategoryOptions,
+    failedEmails,
+  ] = await Promise.all([
+    loadMonthlySummaryView(db, year, month),
+    loadRecentTransactions(db, 5),
+    loadUnreadNotifications(db, 5),
+    loadUnclassifiedGroups(db),
+    loadCategoryOptions(db),
+    loadParentCategoryOptions(db),
+    loadFailedInboundEmails(db),
+  ]);
 
   // 今月の経過率（理想ペースライン位置）。JST基準で算出する
   const daysInMonth = jstDaysInMonth(year, month);
@@ -53,7 +62,11 @@ export default async function Home() {
           budgetAmount={monthlySummary.budgetAmount}
           remainingAmount={monthlySummary.remainingAmount}
         />
-        <UnclassifiedQuickClassify groups={unclassifiedGroups} categories={categoryOptions} />
+        <UnclassifiedQuickClassify
+          groups={unclassifiedGroups}
+          categories={categoryOptions}
+          parentOptions={parentCategoryOptions}
+        />
         <FailedEmailResolve emails={failedEmails} />
         <BudgetList breakdowns={monthlySummary.categoryBreakdowns} idealPacePercent={idealPacePercent} />
         <RecentTransactions transactions={transactions} />
