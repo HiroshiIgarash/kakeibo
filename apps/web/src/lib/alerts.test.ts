@@ -30,6 +30,13 @@ async function makeCategory(name = "食費") {
   const [c] = await db.insert(categories).values({ name, kind: "variable" }).returning();
   return c;
 }
+async function makeChildCategory(parentId: number, name: string) {
+  const [c] = await db
+    .insert(categories)
+    .values({ name, kind: "variable", parentId })
+    .returning();
+  return c;
+}
 async function insertTx(categoryId: number | null, amount: number) {
   const [t] = await db
     .insert(transactions)
@@ -146,6 +153,25 @@ describe("evaluateAlertsForTransaction: 予算アラート", () => {
     await evaluate(t.id);
     expect(await db.select().from(budgetAlerts)).toHaveLength(0);
   });
+
+  it("子カテゴリの取引で親の予算アラートが発火し、複数子の支出が合算される", async () => {
+    const parent = await makeCategory("食費");
+    const okashi = await makeChildCategory(parent.id, "お菓子");
+    const gaishoku = await makeChildCategory(parent.id, "外出");
+    await db.insert(budgets).values({ categoryId: parent.id, month: MONTH_KEY, amount: 10_000 });
+    await db
+      .insert(budgetAlertSettings)
+      .values({ categoryId: parent.id, threshold: 80, threshold2: null, isActive: true });
+    await insertTx(okashi.id, 5_000);
+    const t2 = await insertTx(gaishoku.id, 4_000); // 5,000 + 4,000 = 9,000 (90%) >= 80
+
+    await evaluate(t2.id);
+
+    const alerts = await db.select().from(budgetAlerts);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].categoryId).toBe(parent.id); // 記録される categoryId は親ID
+    expect(alerts[0].threshold).toBe(80);
+  });
 });
 
 describe("evaluateAlertsForTransaction: ペースアラート", () => {
@@ -239,6 +265,17 @@ describe("evaluateAlertsForTransaction: ペースアラート", () => {
       await db.select().from(paceAlerts).where(eq(paceAlerts.id, alert.id))
     )[0];
     expect(updated.recoveredAt).not.toBeNull();
+  });
+
+  it("子カテゴリの取引で親のペースアラートが発火する", async () => {
+    const parent = await setup(); // 親にペース設定・予算あり
+    const child = await makeChildCategory(parent.id, "外出");
+    // 7/10: ideal=10/31≈0.323, spent15000/30000=0.5 → pace_rate≈155 >= 110
+    const t = await insertTx(child.id, 15_000);
+    await evaluate(t.id);
+    const alerts = await db.select().from(paceAlerts);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].categoryId).toBe(parent.id); // 記録される categoryId は親ID
   });
 });
 

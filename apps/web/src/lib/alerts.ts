@@ -1,8 +1,9 @@
-import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import type { DbTransaction } from "../db/schema";
 import {
   budgetAlerts,
   budgetAlertSettings,
+  categories,
   notifications,
   paceAlerts,
   paceAlertSettings,
@@ -10,6 +11,7 @@ import {
   unclassifiedAlerts,
 } from "../db/schema";
 import { calcBudgetPace } from "./budget-pace";
+import { getAlertTargetCategoryIds } from "./category-tree";
 import { jstDateParts, jstEndOfDay, jstMonthRange, jstToday, monthKey } from "./dates";
 import { getEffectiveBudget } from "./effective-budget";
 
@@ -26,8 +28,19 @@ export async function evaluateAlertsForTransaction(
   const categoryId = transaction.categoryId;
   if (categoryId == null) return; // 未分類はアラート対象外
 
-  await evaluateBudgetAlert(tx, categoryId, transaction.purchasedAt);
-  await evaluatePaceAlert(tx, categoryId);
+  // 取引は子カテゴリに紐づく。予算・アラート設定は親のみに存在するため親IDへ解決する。
+  // 親直付け取引（parentId null）はフォールバックで自身のIDのまま判定する。
+  const catRow = (
+    await tx
+      .select({ parentId: categories.parentId })
+      .from(categories)
+      .where(eq(categories.id, categoryId))
+      .limit(1)
+  )[0];
+  const alertCategoryId = catRow?.parentId ?? categoryId;
+
+  await evaluateBudgetAlert(tx, alertCategoryId, transaction.purchasedAt);
+  await evaluatePaceAlert(tx, alertCategoryId);
 }
 
 async function evaluateBudgetAlert(
@@ -51,13 +64,14 @@ async function evaluateBudgetAlert(
   )[0];
   if (!setting || !setting.isActive) return;
 
+  const targetIds = await getAlertTargetCategoryIds(tx, categoryId);
   const { start, end } = jstMonthRange(year, month);
   const spentRow = await tx
     .select({ spent: sql<string>`coalesce(sum(${transactions.amount}), 0)` })
     .from(transactions)
     .where(
       and(
-        eq(transactions.categoryId, categoryId),
+        inArray(transactions.categoryId, targetIds),
         gte(transactions.purchasedAt, start),
         lte(transactions.purchasedAt, end),
       ),
@@ -120,13 +134,14 @@ async function evaluatePaceAlert(tx: DbTransaction, categoryId: number): Promise
   const budget = await getEffectiveBudget(tx, categoryId, mKey);
   if (!budget) return;
 
+  const targetIds = await getAlertTargetCategoryIds(tx, categoryId);
   const { start } = jstMonthRange(year, month);
   const spentRow = await tx
     .select({ spent: sql<string>`coalesce(sum(${transactions.amount}), 0)` })
     .from(transactions)
     .where(
       and(
-        eq(transactions.categoryId, categoryId),
+        inArray(transactions.categoryId, targetIds),
         gte(transactions.purchasedAt, start),
         lte(transactions.purchasedAt, jstEndOfDay(today)),
       ),

@@ -30,8 +30,9 @@ describe("createTransaction", () => {
       .insert(categories)
       .values({ name: "お菓子", kind: "variable", sortOrder: 0, parentId: parent.id })
       .returning();
-    await testDb.insert(budgets).values({ categoryId: cat.id, month: "2026-07-01", amount: 1000 });
-    await testDb.insert(budgetAlertSettings).values({ categoryId: cat.id, threshold: 80, isActive: true });
+    // 予算・アラート設定は親カテゴリにのみ存在する（子カテゴリへの割当は actions バリデーションで拒否される）
+    await testDb.insert(budgets).values({ categoryId: parent.id, month: "2026-07-01", amount: 1000 });
+    await testDb.insert(budgetAlertSettings).values({ categoryId: parent.id, threshold: 80, isActive: true });
 
     const res = await createTransaction({ storeName: "A", amount: 900, purchasedAt: "2026-07-10", categoryId: String(cat.id) });
     expect(res.errors).toEqual([]);
@@ -82,8 +83,9 @@ describe("updateTransaction", () => {
       .insert(categories)
       .values({ name: "お菓子", kind: "variable", sortOrder: 0, parentId: parent.id })
       .returning();
-    await testDb.insert(budgets).values({ categoryId: cat.id, month: "2026-07-01", amount: 1000 });
-    await testDb.insert(budgetAlertSettings).values({ categoryId: cat.id, threshold: 80, isActive: true });
+    // 予算・アラート設定は親カテゴリにのみ存在する（子カテゴリへの割当は actions バリデーションで拒否される）
+    await testDb.insert(budgets).values({ categoryId: parent.id, month: "2026-07-01", amount: 1000 });
+    await testDb.insert(budgetAlertSettings).values({ categoryId: parent.id, threshold: 80, isActive: true });
     const c = await createTransaction({ storeName: "A", amount: 100, purchasedAt: "2026-07-10", categoryId: null });
     expect(c.errors).toEqual([]);
     const [t] = await testDb.select().from(transactions);
