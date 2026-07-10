@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db/schema";
 import {
   transactions,
@@ -14,7 +15,13 @@ import { getMonthlySummary } from "@/lib/monthly-summary";
 import { jstMonthRange } from "@/lib/dates";
 import { toJstDateString } from "@/lib/serialize";
 
-export type CategoryRef = { id: string; name: string; color: string | null };
+export type CategoryRef = {
+  id: string;
+  name: string;
+  color: string | null;
+  parentId: string | null;
+  parentName: string | null;
+};
 export type TransactionView = {
   id: string;
   amount: number;
@@ -23,8 +30,22 @@ export type TransactionView = {
   memo: string | null;
   category: CategoryRef | null;
 };
-export type CategoryView = { id: string; name: string; kind: "fixed" | "variable"; color: string | null };
-export type CategoryOption = { id: string; name: string; color: string | null };
+export type CategoryView = {
+  id: string;
+  name: string;
+  kind: "fixed" | "variable";
+  color: string | null;
+  parentId: string | null;
+  sortOrder: number;
+};
+export type CategoryOption = {
+  id: string;
+  name: string;
+  color: string | null;
+  parentId: string;
+  parentName: string;
+};
+export type ParentCategoryOption = { id: string; name: string; color: string | null };
 export type StoreMappingView = {
   id: string;
   storeName: string;
@@ -64,6 +85,9 @@ export type AlertSettingsView = {
   }>;
 };
 
+// 親カテゴリを self-join するための alias（子の CategoryRef.color/parentName 補完に使う）
+const parentCategories = alias(categories, "parent_categories");
+
 // 取引行を category 同梱の TransactionView へ整形する共通クエリ
 async function selectTransactions(
   db: Db,
@@ -80,9 +104,13 @@ async function selectTransactions(
       catId: categories.id,
       catName: categories.name,
       catColor: categories.color,
+      parentId: categories.parentId,
+      parentName: parentCategories.name,
+      parentColor: parentCategories.color,
     })
     .from(transactions)
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
+    .leftJoin(parentCategories, eq(categories.parentId, parentCategories.id))
     .where(where)
     .orderBy(desc(transactions.purchasedAt), desc(transactions.id));
   const rows = limit != null ? await q.limit(limit) : await q;
@@ -92,7 +120,16 @@ async function selectTransactions(
     storeName: r.storeName,
     purchasedAt: toJstDateString(r.purchasedAt),
     memo: r.memo,
-    category: r.catId == null ? null : { id: String(r.catId), name: r.catName!, color: r.catColor },
+    category:
+      r.catId == null
+        ? null
+        : {
+            id: String(r.catId),
+            name: r.catName!,
+            color: r.parentColor ?? r.catColor,
+            parentId: r.parentId == null ? null : String(r.parentId),
+            parentName: r.parentName ?? null,
+          },
   }));
 }
 
@@ -136,15 +173,61 @@ export async function loadMonthlySummaryView(
 
 export async function loadCategories(db: Db): Promise<CategoryView[]> {
   const rows = await db
-    .select({ id: categories.id, name: categories.name, kind: categories.kind, color: categories.color })
+    .select({
+      id: categories.id,
+      name: categories.name,
+      kind: categories.kind,
+      color: categories.color,
+      parentId: categories.parentId,
+      sortOrder: categories.sortOrder,
+    })
     .from(categories)
     .orderBy(asc(categories.sortOrder), asc(categories.id));
-  return rows.map((r) => ({ id: String(r.id), name: r.name, kind: r.kind, color: r.color }));
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: r.name,
+    kind: r.kind,
+    color: r.color,
+    parentId: r.parentId == null ? null : String(r.parentId),
+    sortOrder: r.sortOrder,
+  }));
 }
 
+/** 子カテゴリのみ（分類先の選択肢は子のみ許可。色・名前は親から補完） */
 export async function loadCategoryOptions(db: Db): Promise<CategoryOption[]> {
-  const rows = await loadCategories(db);
-  return rows.map((c) => ({ id: c.id, name: c.name, color: c.color }));
+  const rows = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      parentId: categories.parentId,
+      parentName: parentCategories.name,
+      parentColor: parentCategories.color,
+    })
+    .from(categories)
+    .innerJoin(parentCategories, eq(categories.parentId, parentCategories.id))
+    .orderBy(
+      asc(parentCategories.sortOrder),
+      asc(parentCategories.id),
+      asc(categories.sortOrder),
+      asc(categories.id),
+    );
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: r.name,
+    color: r.parentColor,
+    parentId: String(r.parentId),
+    parentName: r.parentName,
+  }));
+}
+
+/** 親カテゴリのみ（予算設定・カテゴリ管理画面の親選択用） */
+export async function loadParentCategoryOptions(db: Db): Promise<ParentCategoryOption[]> {
+  const rows = await db
+    .select({ id: categories.id, name: categories.name, color: categories.color })
+    .from(categories)
+    .where(isNull(categories.parentId))
+    .orderBy(asc(categories.sortOrder), asc(categories.id));
+  return rows.map((r) => ({ id: String(r.id), name: r.name, color: r.color }));
 }
 
 export async function loadStoreMappings(db: Db): Promise<StoreMappingView[]> {
@@ -156,15 +239,25 @@ export async function loadStoreMappings(db: Db): Promise<StoreMappingView[]> {
       catId: categories.id,
       catName: categories.name,
       catColor: categories.color,
+      parentId: categories.parentId,
+      parentName: parentCategories.name,
+      parentColor: parentCategories.color,
     })
     .from(storeCategoryMappings)
     .innerJoin(categories, eq(storeCategoryMappings.categoryId, categories.id))
+    .leftJoin(parentCategories, eq(categories.parentId, parentCategories.id))
     .orderBy(asc(storeCategoryMappings.storeName));
   return rows.map((r) => ({
     id: String(r.id),
     storeName: r.storeName,
     categoryId: String(r.categoryId),
-    category: { id: String(r.catId), name: r.catName, color: r.catColor },
+    category: {
+      id: String(r.catId),
+      name: r.catName,
+      color: r.parentColor ?? r.catColor,
+      parentId: r.parentId == null ? null : String(r.parentId),
+      parentName: r.parentName ?? null,
+    },
   }));
 }
 
@@ -227,6 +320,7 @@ export async function loadBudgetSettingsView(db: Db, monthKey: string): Promise<
     db
       .select({ categoryId: categories.id, categoryName: categories.name })
       .from(categories)
+      .where(isNull(categories.parentId))
       .orderBy(asc(categories.sortOrder), asc(categories.id)),
     getEffectiveBudgets(db, monthKey),
   ]);

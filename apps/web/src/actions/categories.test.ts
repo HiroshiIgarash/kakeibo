@@ -115,10 +115,16 @@ describe("deleteCategory", () => {
 });
 
 describe("getCategoryOptions", () => {
-  it("カテゴリ一覧を id/name/color 形式で返す", async () => {
-    await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0, color: "#333" });
+  it("子カテゴリのみを id/name/color(親のcolor)/parentId/parentName 形式で返す", async () => {
+    const [food] = await testDb
+      .insert(categories)
+      .values({ name: "食費", kind: "variable", sortOrder: 0, color: "#333" })
+      .returning();
+    await testDb.insert(categories).values({ name: "お菓子", kind: "variable", sortOrder: 0, parentId: food.id });
     const { getCategoryOptions } = await import("./categories");
     const options = await getCategoryOptions();
-    expect(options).toEqual([{ id: expect.any(String), name: "食費", color: "#333" }]);
+    expect(options).toEqual([
+      { id: expect.any(String), name: "お菓子", color: "#333", parentId: String(food.id), parentName: "食費" },
+    ]);
   });
 });

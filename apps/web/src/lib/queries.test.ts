@@ -5,6 +5,8 @@ import {
   loadRecentTransactions,
   loadTransactionsByMonth,
   loadCategories,
+  loadCategoryOptions,
+  loadParentCategoryOptions,
   loadStoreMappings,
   loadBudgetSettingsView,
   loadUnclassifiedGroups,
@@ -205,5 +207,51 @@ describe("loadFailedInboundEmails", () => {
       errorMessage: "抽出失敗: 利用金額",
     });
     expect(typeof rows[1].id).toBe("string");
+  });
+});
+
+describe("階層ローダー", () => {
+  it("loadCategoryOptions は子のみ返し、親名・親colorを同梱する", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", color: "#f00", sortOrder: 1 }).returning();
+    await db.insert(categories).values({ name: "趣味", kind: "variable", sortOrder: 2 }); // 子なし親
+    const [snack] = await db.insert(categories).values({ name: "お菓子", kind: "variable", parentId: food.id, sortOrder: 1 }).returning();
+    const options = await loadCategoryOptions(db);
+    expect(options).toEqual([
+      { id: String(snack.id), name: "お菓子", color: "#f00", parentId: String(food.id), parentName: "食費" },
+    ]);
+  });
+
+  it("loadParentCategoryOptions は親のみ返す", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", color: "#f00", sortOrder: 1 }).returning();
+    await db.insert(categories).values({ name: "お菓子", kind: "variable", parentId: food.id }).returning();
+    const options = await loadParentCategoryOptions(db);
+    expect(options).toEqual([{ id: String(food.id), name: "食費", color: "#f00" }]);
+  });
+
+  it("loadCategories は parentId と sortOrder を含む", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 3 }).returning();
+    const rows = await loadCategories(db);
+    expect(rows[0]).toMatchObject({ id: String(food.id), parentId: null, sortOrder: 3 });
+  });
+
+  it("取引の category に親情報が付き、色は親のcolorになる", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", color: "#f00" }).returning();
+    const [snack] = await db.insert(categories).values({ name: "お菓子", kind: "variable", parentId: food.id }).returning();
+    await db.insert(transactions).values({ amount: 100, storeName: "A", purchasedAt: new Date(), source: "manual", categoryId: snack.id });
+    const rows = await loadRecentTransactions(db, 10);
+    expect(rows[0].category).toEqual({
+      id: String(snack.id),
+      name: "お菓子",
+      color: "#f00",
+      parentId: String(food.id),
+      parentName: "食費",
+    });
+  });
+
+  it("loadBudgetSettingsView は親カテゴリのみ列挙する", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 1 }).returning();
+    await db.insert(categories).values({ name: "お菓子", kind: "variable", parentId: food.id });
+    const rows = await loadBudgetSettingsView(db, "2026-07-01");
+    expect(rows.map((r) => r.categoryName)).toEqual(["食費"]);
   });
 });
