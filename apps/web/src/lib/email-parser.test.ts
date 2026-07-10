@@ -76,3 +76,26 @@ describe("parseSmbcEmail", () => {
     expect(r.error).toContain("利用日");
   });
 });
+
+describe("extractSmbcFields（部分抽出・失敗メールのプリフィル用）", () => {
+  it("外貨建て本文から店名と日付を抽出し、金額は生文字列で返す", async () => {
+    const { extractSmbcFields } = await import("./email-parser");
+    const plain = "◇利用日：2026/06/09 20:32\n◇利用先：GOOGLE*YOUTUBE MEMBER\n◇利用取引：買物\n◇利用金額：990.00 JPY\n";
+    expect(extractSmbcFields(plain)).toEqual({
+      storeName: "GOOGLE*YOUTUBE MEMBER",
+      date: "2026-06-09",
+      amountRaw: "990.00 JPY",
+    });
+  });
+
+  it("全角ハイフン店名はNFKC正規化される", async () => {
+    const { extractSmbcFields } = await import("./email-parser");
+    const plain = "◇利用先：セブン－イレブン\n";
+    expect(extractSmbcFields(plain).storeName).toBe("セブン-イレブン");
+  });
+
+  it("何も無い本文は全てundefined", async () => {
+    const { extractSmbcFields } = await import("./email-parser");
+    expect(extractSmbcFields("こんにちは")).toEqual({});
+  });
+});

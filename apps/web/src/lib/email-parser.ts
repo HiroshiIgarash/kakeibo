@@ -53,3 +53,30 @@ export function parseSmbcEmail(input: {
 
   return { ok: true, amount, storeName, purchasedAt };
 }
+
+/**
+ * 失敗メールのプリフィル用の部分抽出。取れたフィールドだけ返す（全て optional）。
+ * parseSmbcEmail と同じラベル正規表現・店名正規化を使うが、金額は数値化せず生文字列で返す
+ * （外貨建て等、円表記でない金額のヒント表示用）。
+ */
+export function extractSmbcFields(plain: string): {
+  storeName?: string;
+  date?: string; // 'YYYY-MM-DD'
+  amountRaw?: string;
+} {
+  const result: { storeName?: string; date?: string; amountRaw?: string } = {};
+
+  const storeMatch = plain.match(STORE_RE);
+  if (storeMatch) result.storeName = storeMatch[1].trim().normalize("NFKC");
+
+  const dateMatch = plain.match(DATE_RE);
+  if (dateMatch) {
+    const [y, m, d] = dateMatch[1].split("/").map(Number);
+    result.date = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  const amountRawMatch = plain.match(/(?:ご)?利用金額[：:]\s*(.+)/);
+  if (amountRawMatch) result.amountRaw = amountRawMatch[1].trim();
+
+  return result;
+}

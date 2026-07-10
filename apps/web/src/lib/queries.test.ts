@@ -184,3 +184,26 @@ describe("loadUnclassifiedGroups", () => {
     expect(groups.map((g) => g.storeName)).toEqual(["セブン", "ローソン"]);
   });
 });
+
+describe("loadFailedInboundEmails", () => {
+  it("failedのみをcreated_at降順で返し、本文からプリフィルを抽出する", async () => {
+    const { inboundEmails } = await import("@/db/schema");
+    const { loadFailedInboundEmails } = await import("./queries");
+    await db.insert(inboundEmails).values([
+      { messageId: "<f1@x>", from: "statement@vpass.ne.jp", subject: "ご利用のお知らせ", rawBody: "◇利用日：2026/06/09 20:32\n◇利用先：GOOGLE*YOUTUBE MEMBER\n◇利用金額：990.00 JPY", status: "failed", errorMessage: "抽出失敗: 利用金額", createdAt: new Date("2026-06-09T12:00:00Z") },
+      { messageId: "<f2@x>", from: "statement@vpass.ne.jp", subject: "ご利用のお知らせ", rawBody: "本文なし", status: "failed", errorMessage: "err", createdAt: new Date("2026-07-01T12:00:00Z") },
+      { messageId: "<ok@x>", from: "statement@vpass.ne.jp", subject: "ご利用のお知らせ", rawBody: "x", status: "skipped", createdAt: new Date("2026-07-02T12:00:00Z") },
+    ]);
+    const rows = await loadFailedInboundEmails(db);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].receivedAt).toBe("2026-07-01"); // 降順
+    expect(rows[0].storeName).toBeUndefined();
+    expect(rows[1]).toMatchObject({
+      storeName: "GOOGLE*YOUTUBE MEMBER",
+      date: "2026-06-09",
+      amountRaw: "990.00 JPY",
+      errorMessage: "抽出失敗: 利用金額",
+    });
+    expect(typeof rows[1].id).toBe("string");
+  });
+});

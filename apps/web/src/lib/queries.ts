@@ -6,8 +6,10 @@ import {
   storeCategoryMappings,
   budgetAlertSettings,
   paceAlertSettings,
+  inboundEmails,
 } from "@/db/schema";
 import { getEffectiveBudgets } from "@/lib/effective-budget";
+import { extractSmbcFields } from "@/lib/email-parser";
 import { getMonthlySummary } from "@/lib/monthly-summary";
 import { jstMonthRange } from "@/lib/dates";
 import { toJstDateString } from "@/lib/serialize";
@@ -266,4 +268,33 @@ export async function loadUnclassifiedGroups(db: Db): Promise<UnclassifiedGroup[
     count: Number(r.count),
     totalAmount: Number(r.totalAmount),
   }));
+}
+
+export type FailedInboundEmailView = {
+  id: string;
+  subject: string | null;
+  errorMessage: string | null;
+  receivedAt: string; // JST 'YYYY-MM-DD'
+  storeName?: string;
+  date?: string; // 抽出できた利用日 'YYYY-MM-DD'
+  amountRaw?: string; // 元の金額表記（例: '990.00 JPY'）
+};
+
+/** 取り込み失敗メール（手動登録用）。created_at 降順、本文からプリフィルを部分抽出 */
+export async function loadFailedInboundEmails(db: Db): Promise<FailedInboundEmailView[]> {
+  const rows = await db
+    .select()
+    .from(inboundEmails)
+    .where(eq(inboundEmails.status, "failed"))
+    .orderBy(desc(inboundEmails.createdAt));
+  return rows.map((r) => {
+    const fields = extractSmbcFields(r.rawBody);
+    return {
+      id: String(r.id),
+      subject: r.subject,
+      errorMessage: r.errorMessage,
+      receivedAt: toJstDateString(r.createdAt),
+      ...fields,
+    };
+  });
 }
