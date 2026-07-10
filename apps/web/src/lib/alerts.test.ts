@@ -51,6 +51,20 @@ describe("evaluateAlertsForTransaction: 予算アラート", () => {
     ({ db, teardown } = await createTestDb());
   });
 
+  it("明示行が無い月でも直近月の予算を引き継いでアラート判定する", async () => {
+    const c = await makeCategory();
+    // 予算は5月にのみ設定 → 7月の取引は引き継ぎ予算(10,000円)で判定される
+    await db.insert(budgets).values({ categoryId: c.id, month: "2026-05-01", amount: 10_000 });
+    await db
+      .insert(budgetAlertSettings)
+      .values({ categoryId: c.id, threshold: 80, threshold2: null, isActive: true });
+    const t = await insertTx(c.id, 8_500); // 85% >= 80
+    await evaluate(t.id);
+    const alerts = await db.select().from(budgetAlerts);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].month).toBe(MONTH_KEY); // アラートの月キーは取引の月のまま
+  });
+
   it("使用率が閾値超過で BudgetAlert と Notification を1件ずつ作成", async () => {
     const c = await makeCategory();
     await db.insert(budgets).values({ categoryId: c.id, month: MONTH_KEY, amount: 10_000 });

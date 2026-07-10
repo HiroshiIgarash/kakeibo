@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { eq } from "drizzle-orm";
 import { createTestDb } from "@/test/db";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -8,7 +7,7 @@ const { db: testDb, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
 const { categories, budgets } = await import("@/db/schema");
-const { upsertBudget, deleteBudget, copyBudgetsFromPreviousMonth } = await import("./budgets");
+const { upsertBudget, deleteBudget } = await import("./budgets");
 
 afterAll(async () => {
   await teardown();
@@ -79,57 +78,6 @@ describe("deleteBudget", () => {
 
   it("存在しないIDはエラーを返す", async () => {
     const result = await deleteBudget({ id: "999999" });
-    expect(result.errors.length).toBeGreaterThan(0);
-  });
-});
-
-describe("copyBudgetsFromPreviousMonth", () => {
-  it("前月の予算を対象月へコピーし件数を返す", async () => {
-    const [c2] = await testDb.insert(categories).values({ name: "日用品", kind: "variable", sortOrder: 1 }).returning();
-    await testDb.insert(budgets).values([
-      { categoryId: catId, month: "2026-06-01", amount: 40000 },
-      { categoryId: c2.id, month: "2026-06-01", amount: 5000 },
-    ]);
-
-    const result = await copyBudgetsFromPreviousMonth({ month: "2026-07-01" });
-    expect(result.errors).toEqual([]);
-    expect(result.copied).toBe(2);
-    const julyRows = await testDb.select().from(budgets).where(eq(budgets.month, "2026-07-01"));
-    expect(julyRows).toHaveLength(2);
-    expect(julyRows.map((r) => r.amount).sort((a, b) => a - b)).toEqual([5000, 40000]);
-  });
-
-  it("対象月に既にあるカテゴリは上書きしない", async () => {
-    await testDb.insert(budgets).values([
-      { categoryId: catId, month: "2026-06-01", amount: 40000 },
-      { categoryId: catId, month: "2026-07-01", amount: 12345 },
-    ]);
-
-    const result = await copyBudgetsFromPreviousMonth({ month: "2026-07-01" });
-    expect(result.errors).toEqual([]);
-    expect(result.copied).toBe(0);
-    const julyRows = await testDb.select().from(budgets).where(eq(budgets.month, "2026-07-01"));
-    expect(julyRows).toHaveLength(1);
-    expect(julyRows[0].amount).toBe(12345);
-  });
-
-  it("前月がゼロ件なら copied=0 でエラーにしない", async () => {
-    const result = await copyBudgetsFromPreviousMonth({ month: "2026-07-01" });
-    expect(result.errors).toEqual([]);
-    expect(result.copied).toBe(0);
-  });
-
-  it("年またぎ: 1月への実行は前年12月からコピーする", async () => {
-    await testDb.insert(budgets).values({ categoryId: catId, month: "2026-12-01", amount: 40000 });
-    const result = await copyBudgetsFromPreviousMonth({ month: "2027-01-01" });
-    expect(result.errors).toEqual([]);
-    expect(result.copied).toBe(1);
-    const rows = await testDb.select().from(budgets).where(eq(budgets.month, "2027-01-01"));
-    expect(rows).toHaveLength(1);
-  });
-
-  it("不正な月は拒否", async () => {
-    const result = await copyBudgetsFromPreviousMonth({ month: "2026-13-01" });
     expect(result.errors.length).toBeGreaterThan(0);
   });
 });

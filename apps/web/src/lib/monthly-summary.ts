@@ -1,8 +1,9 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import type { Db } from "../db/schema";
-import { budgets, categories, transactions } from "../db/schema";
+import { categories, transactions } from "../db/schema";
 import { calcBudgetPace, type PaceStatus } from "./budget-pace";
 import { jstDateParts, jstEndOfDay, jstMonthRange, jstToday, monthKey } from "./dates";
+import { getEffectiveBudgets } from "./effective-budget";
 
 export type CategoryBreakdown = {
   categoryId: number;
@@ -36,11 +37,10 @@ export async function getMonthlySummary(
     .where(and(gte(transactions.purchasedAt, start), lte(transactions.purchasedAt, end)));
   const totalAmount = Number(totalRow[0].total);
 
-  const budgetRow = await db
-    .select({ total: sql<string>`coalesce(sum(${budgets.amount}), 0)` })
-    .from(budgets)
-    .where(eq(budgets.month, mKey));
-  const budgetAmount = Number(budgetRow[0].total);
+  // 有効予算（対象月に明示行が無ければ直近月の設定を引き継ぐ）
+  const effectiveBudgets = await getEffectiveBudgets(db, mKey);
+  let budgetAmount = 0;
+  for (const b of effectiveBudgets.values()) budgetAmount += b.amount;
 
   // カテゴリ別集計（category_id が null の取引は inner join で除外される）
   const grouped = await db
@@ -71,13 +71,7 @@ export async function getMonthlySummary(
     let dAmount: number | null = null;
 
     if (paceDate) {
-      const budget = (
-        await db
-          .select()
-          .from(budgets)
-          .where(and(eq(budgets.categoryId, categoryId), eq(budgets.month, mKey)))
-          .limit(1)
-      )[0];
+      const budget = effectiveBudgets.get(categoryId);
       if (budget) {
         const spentRow = await db
           .select({ spent: sql<string>`coalesce(sum(${transactions.amount}), 0)` })

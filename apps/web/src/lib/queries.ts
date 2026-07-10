@@ -6,8 +6,8 @@ import {
   storeCategoryMappings,
   budgetAlertSettings,
   paceAlertSettings,
-  budgets,
 } from "@/db/schema";
+import { getEffectiveBudgets } from "@/lib/effective-budget";
 import { getMonthlySummary } from "@/lib/monthly-summary";
 import { jstMonthRange } from "@/lib/dates";
 import { toJstDateString } from "@/lib/serialize";
@@ -216,23 +216,29 @@ export type BudgetSettingRow = {
   categoryName: string;
   budgetId: string | null;
   amount: number | null;
+  /** 対象月に明示行が無く、過去の設定を引き継いでいる場合の情報（fromMonth は 'YYYY-MM-01'） */
+  inherited: { amount: number; fromMonth: string } | null;
 };
 
 export async function loadBudgetSettingsView(db: Db, monthKey: string): Promise<BudgetSettingRow[]> {
-  const rows = await db
-    .select({
-      categoryId: categories.id,
-      categoryName: categories.name,
-      budgetId: budgets.id,
-      amount: budgets.amount,
-    })
-    .from(categories)
-    .leftJoin(budgets, and(eq(budgets.categoryId, categories.id), eq(budgets.month, monthKey)))
-    .orderBy(asc(categories.sortOrder), asc(categories.id));
-  return rows.map((r) => ({
-    categoryId: String(r.categoryId),
-    categoryName: r.categoryName,
-    budgetId: r.budgetId == null ? null : String(r.budgetId),
-    amount: r.amount ?? null,
-  }));
+  const [rows, effective] = await Promise.all([
+    db
+      .select({ categoryId: categories.id, categoryName: categories.name })
+      .from(categories)
+      .orderBy(asc(categories.sortOrder), asc(categories.id)),
+    getEffectiveBudgets(db, monthKey),
+  ]);
+  return rows.map((r) => {
+    const b = effective.get(r.categoryId);
+    // 有効予算の月が対象月と一致 = その月の明示行。それ以外は引き継ぎ
+    const explicit = b != null && b.month === monthKey ? b : null;
+    const inherited = b != null && b.month !== monthKey ? b : null;
+    return {
+      categoryId: String(r.categoryId),
+      categoryName: r.categoryName,
+      budgetId: explicit == null ? null : String(explicit.budgetId),
+      amount: explicit?.amount ?? null,
+      inherited: inherited == null ? null : { amount: inherited.amount, fromMonth: inherited.month },
+    };
+  });
 }

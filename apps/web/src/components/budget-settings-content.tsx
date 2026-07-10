@@ -3,11 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { upsertBudget, deleteBudget, copyBudgetsFromPreviousMonth } from "@/actions/budgets";
+import { upsertBudget, deleteBudget } from "@/actions/budgets";
 import type { BudgetSettingRow } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Copy, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+
+/** 'YYYY-MM-01' → 'YYYY年M月' */
+function monthKeyLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return `${year}年${month}月`;
+}
 
 // ────────────────────────────────────────────────────────────────
 // 予算行（金額のインライン編集・行ごと保存）
@@ -25,7 +31,7 @@ function BudgetRow({ row, month }: { row: BudgetSettingRow; month: string }) {
     setSaving(true);
     let result;
     if (value.trim() === "") {
-      // 空欄で保存 = その月の予算を削除（未設定なら何もしない）
+      // 空欄で保存 = この月の個別設定を取り消す（過去の設定があればそれを引き継ぐ状態に戻る）
       result = row.budgetId ? await deleteBudget({ id: row.budgetId }) : { errors: [] };
     } else {
       const amount = Number(value);
@@ -58,7 +64,7 @@ function BudgetRow({ row, month }: { row: BudgetSettingRow; month: string }) {
             min={1}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="未設定"
+            placeholder={row.inherited ? String(row.inherited.amount) : "未設定"}
             className="w-28 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
@@ -66,6 +72,11 @@ function BudgetRow({ row, month }: { row: BudgetSettingRow; month: string }) {
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "保存"}
         </Button>
       </div>
+      {row.inherited && row.amount == null && (
+        <p className="text-xs text-muted-foreground">
+          {monthKeyLabel(row.inherited.fromMonth)}の設定（¥{row.inherited.amount.toLocaleString()}）を引き継ぎ中
+        </p>
+      )}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
@@ -83,59 +94,22 @@ type Props = {
 };
 
 export function BudgetSettingsContent({ rows, month, monthLabel, prevHref, nextHref }: Props) {
-  const router = useRouter();
-  const [copying, setCopying] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleCopy() {
-    setError(null);
-    setMessage(null);
-    setCopying(true);
-    const result = await copyBudgetsFromPreviousMonth({ month });
-    setCopying(false);
-    if (result.errors.length > 0) {
-      setError(result.errors.join(", "));
-      return;
-    }
-    setMessage(
-      result.copied && result.copied > 0
-        ? `前月から${result.copied}件コピーしました`
-        : "コピー対象がありませんでした（前月が未設定、または全カテゴリ設定済み）",
-    );
-    router.refresh();
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
-        カテゴリごとの月次予算を設定します。空欄で保存するとその月の予算を解除します。
+        カテゴリごとの月次予算を設定します。一度設定した予算は、変更するまで以降の月にも引き継がれます。
+        空欄で保存するとその月の個別設定を取り消します。
       </p>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href={prevHref} className="p-1 rounded hover:bg-muted transition-colors" aria-label="前の月">
-            <ChevronLeft className="w-4 h-4" />
-          </Link>
-          <p className="text-sm font-semibold tabular-nums">{monthLabel}</p>
-          <Link href={nextHref} className="p-1 rounded hover:bg-muted transition-colors" aria-label="次の月">
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <Button type="button" variant="outline" size="sm" disabled={copying} onClick={handleCopy}>
-          {copying ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <>
-              <Copy className="w-3.5 h-3.5 mr-1" />
-              前月からコピー
-            </>
-          )}
-        </Button>
+      <div className="flex items-center gap-2">
+        <Link href={prevHref} className="p-1 rounded hover:bg-muted transition-colors" aria-label="前の月">
+          <ChevronLeft className="w-4 h-4" />
+        </Link>
+        <p className="text-sm font-semibold tabular-nums">{monthLabel}</p>
+        <Link href={nextHref} className="p-1 rounded hover:bg-muted transition-colors" aria-label="次の月">
+          <ChevronRight className="w-4 h-4" />
+        </Link>
       </div>
-
-      {message && <p className="text-xs text-muted-foreground">{message}</p>}
-      {error && <p className="text-xs text-red-500">{error}</p>}
 
       <div className="flex flex-col gap-2">
         {rows.length === 0 ? (

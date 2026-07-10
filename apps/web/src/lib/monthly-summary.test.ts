@@ -66,3 +66,31 @@ describe("getMonthlySummary", () => {
     expect(r.categoryBreakdowns).toEqual([]);
   });
 });
+
+describe("getMonthlySummary: 予算の引き継ぎ（有効予算）", () => {
+  it("明示行が無い月でも直近月の予算が budgetAmount に反映される", async () => {
+    ({ db, teardown } = await createTestDb());
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    // 予算は2023年11月にのみ設定
+    await db.insert(budgets).values({ categoryId: food.id, month: "2023-11-01", amount: 40000 });
+    await db.insert(transactions).values({
+      amount: 3000, storeName: "a", purchasedAt: jst("2024-01-02T10:00:00+09:00"), categoryId: food.id, source: "manual",
+    });
+
+    const s = await getMonthlySummary(db, 2024, 1);
+    expect(s.budgetAmount).toBe(40000);
+    expect(s.remainingAmount).toBe(37000);
+  });
+
+  it("引き継ぎ元より後の月で明示変更すると、その月以降は新しい額になる", async () => {
+    ({ db, teardown } = await createTestDb());
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    await db.insert(budgets).values([
+      { categoryId: food.id, month: "2023-11-01", amount: 40000 },
+      { categoryId: food.id, month: "2024-01-01", amount: 50000 },
+    ]);
+
+    expect((await getMonthlySummary(db, 2023, 12)).budgetAmount).toBe(40000);
+    expect((await getMonthlySummary(db, 2024, 2)).budgetAmount).toBe(50000);
+  });
+});

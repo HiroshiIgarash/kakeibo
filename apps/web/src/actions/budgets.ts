@@ -26,7 +26,6 @@ const upsertSchema = z.object({
   month: monthSchema,
 });
 const deleteSchema = z.object({ id: z.string().min(1) });
-const copySchema = z.object({ month: monthSchema });
 
 export async function upsertBudget(input: {
   categoryId: string;
@@ -60,44 +59,4 @@ export async function deleteBudget(input: { id: string }): Promise<ActionResult>
   if (deleted.length === 0) return { errors: [`IDが見つかりません: ${input.id}`] };
   revalidatePath("/");
   return { errors: [] };
-}
-
-/**
- * 前月の予算を対象月へコピーする。対象月に同カテゴリの予算が既にある場合は上書きしない。
- * 戻り値の copied はコピーした件数（前月ゼロ件・全カテゴリ設定済みなら 0）。
- */
-export async function copyBudgetsFromPreviousMonth(input: {
-  month: string;
-}): Promise<ActionResult & { copied?: number }> {
-  const parsed = copySchema.safeParse(input);
-  if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
-  const targetMonth = parsed.data.month;
-
-  const [year, month] = targetMonth.split("-").map(Number);
-  const prevMonth = month === 1 ? monthKey(year - 1, 12) : monthKey(year, month - 1);
-
-  const copied = await db.transaction(async (tx) => {
-    const prevRows = await tx
-      .select({ categoryId: budgets.categoryId, amount: budgets.amount })
-      .from(budgets)
-      .where(eq(budgets.month, prevMonth));
-    if (prevRows.length === 0) return 0;
-
-    const existing = await tx
-      .select({ categoryId: budgets.categoryId })
-      .from(budgets)
-      .where(eq(budgets.month, targetMonth));
-    const existingCatIds = new Set(existing.map((r) => r.categoryId));
-
-    const toInsert = prevRows.filter((r) => !existingCatIds.has(r.categoryId));
-    if (toInsert.length === 0) return 0;
-    await tx
-      .insert(budgets)
-      .values(toInsert.map((r) => ({ categoryId: r.categoryId, month: targetMonth, amount: r.amount })));
-    return toInsert.length;
-  });
-
-  revalidatePath("/");
-  revalidatePath("/settings/budgets");
-  return { errors: [], copied };
 }

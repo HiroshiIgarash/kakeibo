@@ -1,7 +1,6 @@
 import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import type { DbTransaction } from "../db/schema";
 import {
-  budgets,
   budgetAlerts,
   budgetAlertSettings,
   notifications,
@@ -12,6 +11,7 @@ import {
 } from "../db/schema";
 import { calcBudgetPace } from "./budget-pace";
 import { jstDateParts, jstEndOfDay, jstMonthRange, jstToday, monthKey } from "./dates";
+import { getEffectiveBudget } from "./effective-budget";
 
 /** 取引 insert/update と同一 tx 内で、予算アラート(§5.3)とペースアラート(§5.4)を判定する。 */
 export async function evaluateAlertsForTransaction(
@@ -38,13 +38,8 @@ async function evaluateBudgetAlert(
   const { year, month } = jstDateParts(purchasedAt);
   const mKey = monthKey(year, month);
 
-  const budget = (
-    await tx
-      .select()
-      .from(budgets)
-      .where(and(eq(budgets.categoryId, categoryId), eq(budgets.month, mKey)))
-      .limit(1)
-  )[0];
+  // 有効予算: 対象月に明示行が無ければ直近月の設定を引き継ぐ
+  const budget = await getEffectiveBudget(tx, categoryId, mKey);
   if (!budget) return;
 
   const setting = (
@@ -122,13 +117,7 @@ async function evaluatePaceAlert(tx: DbTransaction, categoryId: number): Promise
   if (setting.activeFromDay > day) return; // 月初のデータ不足による誤判定を防ぐ
 
   const mKey = monthKey(year, month);
-  const budget = (
-    await tx
-      .select()
-      .from(budgets)
-      .where(and(eq(budgets.categoryId, categoryId), eq(budgets.month, mKey)))
-      .limit(1)
-  )[0];
+  const budget = await getEffectiveBudget(tx, categoryId, mKey);
   if (!budget) return;
 
   const { start } = jstMonthRange(year, month);
