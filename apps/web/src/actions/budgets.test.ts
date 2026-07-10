@@ -65,6 +65,20 @@ describe("upsertBudget", () => {
     const rows = await testDb.select().from(budgets);
     expect(rows).toHaveLength(2);
   });
+
+  it("子カテゴリへの予算設定は拒否", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費2", kind: "variable" }).returning();
+    const [child] = await testDb.insert(categories).values({ name: "お菓子", kind: "variable", parentId: parent.id }).returning();
+    const res = await upsertBudget({ categoryId: String(child.id), amount: 10000, month: "2026-07-01" });
+    expect(res.errors).toEqual(["親カテゴリを指定してください"]);
+    expect(await testDb.select().from(budgets)).toHaveLength(0);
+  });
+
+  it("存在しないカテゴリへの予算設定は拒否", async () => {
+    const res = await upsertBudget({ categoryId: "999999", amount: 10000, month: "2026-07-01" });
+    expect(res.errors).toEqual(["カテゴリが見つかりません"]);
+    expect(await testDb.select().from(budgets)).toHaveLength(0);
+  });
 });
 
 describe("deleteBudget", () => {

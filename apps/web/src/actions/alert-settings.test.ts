@@ -81,6 +81,25 @@ describe("upsertBudgetAlertSetting", () => {
     const rows = await testDb.select().from(budgetAlertSettings);
     expect(rows).toHaveLength(2);
   });
+
+  it("子カテゴリへの設定は拒否", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費2", kind: "variable" }).returning();
+    const [child] = await testDb.insert(categories).values({ name: "お菓子", kind: "variable", parentId: parent.id }).returning();
+    const res = await upsertBudgetAlertSetting({ categoryId: String(child.id), threshold: 80, threshold2: null, isActive: true });
+    expect(res.errors).toEqual(["親カテゴリを指定してください"]);
+    expect(await testDb.select().from(budgetAlertSettings)).toHaveLength(0);
+  });
+
+  it("存在しないカテゴリへの設定は拒否", async () => {
+    const res = await upsertBudgetAlertSetting({ categoryId: "999999", threshold: 80, threshold2: null, isActive: true });
+    expect(res.errors).toEqual(["カテゴリが見つかりません"]);
+    expect(await testDb.select().from(budgetAlertSettings)).toHaveLength(0);
+  });
+
+  it("categoryId=null（全体設定）は検証をスキップして成功する", async () => {
+    const res = await upsertBudgetAlertSetting({ categoryId: null, threshold: 90, threshold2: null, isActive: true });
+    expect(res.errors).toEqual([]);
+  });
 });
 
 describe("upsertPaceAlertSetting", () => {
@@ -121,5 +140,19 @@ describe("upsertPaceAlertSetting", () => {
   it("categoryId が空文字は拒否", async () => {
     const res = await upsertPaceAlertSetting({ categoryId: "", threshold: 110, activeFromDay: 5, isActive: true });
     expect(res.errors.length).toBeGreaterThan(0);
+  });
+
+  it("子カテゴリへの設定は拒否", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費2", kind: "variable" }).returning();
+    const [child] = await testDb.insert(categories).values({ name: "お菓子", kind: "variable", parentId: parent.id }).returning();
+    const res = await upsertPaceAlertSetting({ categoryId: String(child.id), threshold: 110, activeFromDay: 5, isActive: true });
+    expect(res.errors).toEqual(["親カテゴリを指定してください"]);
+    expect(await testDb.select().from(paceAlertSettings)).toHaveLength(0);
+  });
+
+  it("存在しないカテゴリへの設定は拒否", async () => {
+    const res = await upsertPaceAlertSetting({ categoryId: "999999", threshold: 110, activeFromDay: 5, isActive: true });
+    expect(res.errors).toEqual(["カテゴリが見つかりません"]);
+    expect(await testDb.select().from(paceAlertSettings)).toHaveLength(0);
   });
 });

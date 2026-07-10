@@ -5,6 +5,7 @@ import { eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { budgetAlertSettings, paceAlertSettings } from "@/db/schema";
+import { getCategoryRole } from "@/lib/category-tree";
 
 export type ActionResult = { errors: string[] };
 
@@ -56,6 +57,12 @@ export async function upsertBudgetAlertSetting(input: {
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
   const { categoryId, threshold, threshold2, isActive } = parsed.data;
 
+  if (categoryId != null) {
+    const role = await getCategoryRole(db, categoryId);
+    if (role == null) return { errors: ["カテゴリが見つかりません"] };
+    if (role !== "parent") return { errors: ["親カテゴリを指定してください"] };
+  }
+
   // find_or_initialize_by(category_id) の踏襲。category_id が null の場合は「全体」設定として扱う。
   const whereCat =
     categoryId == null ? isNull(budgetAlertSettings.categoryId) : eq(budgetAlertSettings.categoryId, categoryId);
@@ -83,6 +90,10 @@ export async function upsertPaceAlertSetting(input: {
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
   const { categoryId, threshold, activeFromDay, isActive } = parsed.data;
   const numericCat = Number(categoryId);
+
+  const role = await getCategoryRole(db, numericCat);
+  if (role == null) return { errors: ["カテゴリが見つかりません"] };
+  if (role !== "parent") return { errors: ["親カテゴリを指定してください"] };
 
   const existing = await db
     .select({ id: paceAlertSettings.id })
