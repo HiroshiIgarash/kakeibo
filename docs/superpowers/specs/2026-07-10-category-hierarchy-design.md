@@ -61,8 +61,8 @@
   - `parentId` なし → 親を作成（name / kind / color 必須）
   - `parentId` あり → 子を作成（name のみ。親が存在し、かつ親自身が子でないこと = 孫禁止を検証）
 - `updateCategory`: 親は name / color、子は name のみ
-- `deleteCategory`: 親は「子が1つでも残っていれば拒否」を追加。子は既存の参照チェック
-  （取引・予算・マッピング等）を維持
+- `deleteCategory`: 既存実装を維持（親削除は子を再帰削除。子孫含め参照が1件でもあれば
+  全体をロールバックして拒否）
 
 ### `src/actions/transactions.ts` / `src/actions/mappings.ts`
 - `categoryId` が指定されたら `getCategoryRole` で **child** であることを検証。
@@ -89,7 +89,7 @@
 
 ### UI
 - `category-management-content.tsx`: 親の下に子をネスト表示。親追加（name/kind/color）、
-  親ごとに「＋子を追加」（name のみ）、それぞれ編集・削除。子が残る親の削除はエラー表示
+  親ごとに「＋子を追加」（name のみ）、それぞれ編集・削除（親削除は子ごと削除される旨を確認ダイアログに明記）
 - `transaction-form-sheet.tsx` / `mapping-management-content.tsx` /
   `unclassified-quick-classify.tsx`: カテゴリ選択を「親名でグルーピングした子の一覧」に変更
   （select の optgroup 相当）。クイック分類の「＋新しいカテゴリ」は親選択 + 子名入力に変更
@@ -99,7 +99,7 @@
 
 ## テスト（TDD・pglite）
 - category-tree: buildCategoryTree の並び・ネスト（ユニット）
-- categories action: 親作成 / 子作成 / 孫禁止 / 子ありの親削除拒否
+- categories action: 親作成 / 子作成 / 孫禁止（親削除の再帰削除・参照拒否は既存テストで担保済み）
 - transactions / mappings action: 親ID割当の拒否、子ID割当の成功
 - budgets / alert-settings action: 子ID設定の拒否、親ID設定の成功
 - alerts: 子カテゴリ取引 → 親の予算・ペースアラートが発火（webhook統合含む）
