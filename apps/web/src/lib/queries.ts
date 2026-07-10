@@ -64,6 +64,7 @@ export type MonthlySummaryView = {
     budgetAmount: number | null;
     remainingAmount: number | null;
     dailyAmount: number | null;
+    children: Array<{ categoryId: string; categoryName: string; amount: number }>;
   }>;
 };
 export type AlertSettingsView = {
@@ -167,6 +168,11 @@ export async function loadMonthlySummaryView(
       budgetAmount: b.budgetAmount ?? null,
       remainingAmount: b.remainingAmount ?? null,
       dailyAmount: b.dailyAmount ?? null,
+      children: b.children.map((c) => ({
+        categoryId: String(c.categoryId),
+        categoryName: c.categoryName,
+        amount: c.amount,
+      })),
     })),
   };
 }
