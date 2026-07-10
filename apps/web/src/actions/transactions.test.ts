@@ -25,7 +25,11 @@ beforeEach(async () => {
 
 describe("createTransaction", () => {
   it("手動作成で source=manual の取引が入り、予算アラートが判定される", async () => {
-    const [cat] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    const [cat] = await testDb
+      .insert(categories)
+      .values({ name: "お菓子", kind: "variable", sortOrder: 0, parentId: parent.id })
+      .returning();
     await testDb.insert(budgets).values({ categoryId: cat.id, month: "2026-07-01", amount: 1000 });
     await testDb.insert(budgetAlertSettings).values({ categoryId: cat.id, threshold: 80, isActive: true });
 
@@ -50,11 +54,34 @@ describe("createTransaction", () => {
     expect(res.errors.length).toBeGreaterThan(0);
     expect(await testDb.select().from(transactions)).toHaveLength(0);
   });
+
+  it("createTransaction: 親カテゴリの割当は拒否", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    const res = await createTransaction({ storeName: "A", amount: 100, purchasedAt: "2026-07-01", categoryId: String(parent.id) });
+    expect(res.errors).toEqual(["子カテゴリを選択してください"]);
+    expect(await testDb.select().from(transactions)).toHaveLength(0);
+  });
+
+  it("createTransaction: 子カテゴリは割当できる", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    const [child] = await testDb.insert(categories).values({ name: "お菓子", kind: "variable", parentId: parent.id }).returning();
+    const res = await createTransaction({ storeName: "A", amount: 100, purchasedAt: "2026-07-01", categoryId: String(child.id) });
+    expect(res.errors).toEqual([]);
+  });
+
+  it("createTransaction: 存在しないカテゴリはエラー", async () => {
+    const res = await createTransaction({ storeName: "A", amount: 100, purchasedAt: "2026-07-01", categoryId: "999999" });
+    expect(res.errors).toEqual(["カテゴリが見つかりません"]);
+  });
 });
 
 describe("updateTransaction", () => {
   it("既存取引を更新でき、カテゴリ変更後にアラートが判定される", async () => {
-    const [cat] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    const [cat] = await testDb
+      .insert(categories)
+      .values({ name: "お菓子", kind: "variable", sortOrder: 0, parentId: parent.id })
+      .returning();
     await testDb.insert(budgets).values({ categoryId: cat.id, month: "2026-07-01", amount: 1000 });
     await testDb.insert(budgetAlertSettings).values({ categoryId: cat.id, threshold: 80, isActive: true });
     const c = await createTransaction({ storeName: "A", amount: 100, purchasedAt: "2026-07-10", categoryId: null });
@@ -85,6 +112,24 @@ describe("updateTransaction", () => {
       categoryId: null,
     });
     expect(res.errors.length).toBeGreaterThan(0);
+  });
+
+  it("updateTransaction: 親カテゴリの割当は拒否", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    const [t] = await testDb
+      .insert(transactions)
+      .values({ storeName: "A", amount: 100, purchasedAt: new Date(), source: "manual" })
+      .returning();
+    const res = await updateTransaction({
+      id: String(t.id),
+      storeName: "A",
+      amount: 100,
+      purchasedAt: "2026-07-01",
+      categoryId: String(parent.id),
+    });
+    expect(res.errors).toEqual(["子カテゴリを選択してください"]);
+    const [after] = await testDb.select().from(transactions);
+    expect(after.categoryId).toBeNull();
   });
 });
 

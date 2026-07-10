@@ -22,7 +22,11 @@ beforeEach(async () => {
   for (const t of [notifications, unclassifiedAlerts, transactions, storeCategoryMappings, categories]) {
     await testDb.delete(t);
   }
-  const [c] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+  const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+  const [c] = await testDb
+    .insert(categories)
+    .values({ name: "お菓子", kind: "variable", sortOrder: 0, parentId: parent.id })
+    .returning();
   catId = c.id;
 });
 
@@ -51,9 +55,13 @@ describe("upsertStoreMapping", () => {
 
   it("同一 store_name（正規化後）が既存の場合は upsert（カテゴリを更新）する", async () => {
     await testDb.insert(storeCategoryMappings).values({ storeName: "ABC", categoryId: catId });
-    const [otherCat] = await testDb
+    const [otherParent] = await testDb
       .insert(categories)
       .values({ name: "日用品", kind: "variable", sortOrder: 1 })
+      .returning();
+    const [otherCat] = await testDb
+      .insert(categories)
+      .values({ name: "洗剤", kind: "variable", sortOrder: 0, parentId: otherParent.id })
       .returning();
 
     const res = await upsertStoreMapping({ storeName: "ＡＢＣ", categoryId: String(otherCat.id) });
@@ -93,6 +101,13 @@ describe("upsertStoreMapping", () => {
   it("カテゴリ未選択はバリデーションエラー", async () => {
     const res = await upsertStoreMapping({ storeName: "ABC", categoryId: "" });
     expect(res.errors.length).toBeGreaterThan(0);
+  });
+
+  it("upsertStoreMapping: 親カテゴリは拒否", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    const res = await upsertStoreMapping({ storeName: "セブン", categoryId: String(parent.id) });
+    expect(res.errors).toEqual(["子カテゴリを選択してください"]);
+    expect(await testDb.select().from(storeCategoryMappings)).toHaveLength(0);
   });
 });
 

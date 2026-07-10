@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { transactions } from "@/db/schema";
 import { evaluateAlertsForTransaction, refreshUnclassifiedAlert } from "@/lib/alerts";
+import { getCategoryRole } from "@/lib/category-tree";
 import { jstDateInputToDate } from "@/lib/serialize";
 
 export type ActionResult = { errors: string[] };
@@ -36,6 +37,11 @@ export async function createTransaction(input: {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
   const { storeName, amount, purchasedAt, categoryId } = parsed.data;
+  if (categoryId != null) {
+    const role = await getCategoryRole(db, categoryId);
+    if (role == null) return { errors: ["カテゴリが見つかりません"] };
+    if (role !== "child") return { errors: ["子カテゴリを選択してください"] };
+  }
 
   await db.transaction(async (tx) => {
     const [row] = await tx
@@ -67,6 +73,11 @@ export async function updateTransaction(input: {
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
   const { id, storeName, amount, purchasedAt, categoryId } = parsed.data;
   const numericId = Number(id);
+  if (categoryId != null) {
+    const role = await getCategoryRole(db, categoryId);
+    if (role == null) return { errors: ["カテゴリが見つかりません"] };
+    if (role !== "child") return { errors: ["子カテゴリを選択してください"] };
+  }
 
   let notFound = false;
   await db.transaction(async (tx) => {

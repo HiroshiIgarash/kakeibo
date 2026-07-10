@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { storeCategoryMappings, transactions } from "@/db/schema";
 import { evaluateAlertsForTransaction, refreshUnclassifiedAlert } from "@/lib/alerts";
+import { getCategoryRole } from "@/lib/category-tree";
 import { normalizeStoreName } from "@/lib/store-name";
 
 export type ActionResult = { errors: string[] };
@@ -24,6 +25,10 @@ export async function upsertStoreMapping(input: {
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
   const normalized = normalizeStoreName(parsed.data.storeName);
   const numericCat = Number(parsed.data.categoryId);
+
+  const role = await getCategoryRole(db, numericCat);
+  if (role == null) return { errors: ["カテゴリが見つかりません"] };
+  if (role !== "child") return { errors: ["子カテゴリを選択してください"] };
 
   await db.transaction(async (tx) => {
     // find_or_initialize_by(store_name) 相当の upsert
