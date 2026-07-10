@@ -1,5 +1,5 @@
 import { db } from "@/db/client";
-import { loadAlertSettingsView, loadCategories } from "@/lib/queries";
+import { loadAlertSettingsView, loadParentCategoryOptions } from "@/lib/queries";
 import { AlertSettingsContent } from "@/components/alert-settings-content";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AlertSettingsPage() {
   const [alertSettings, categories] = await Promise.all([
     loadAlertSettingsView(db),
-    loadCategories(db),
+    loadParentCategoryOptions(db),
   ]);
 
   return (
