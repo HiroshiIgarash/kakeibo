@@ -39,14 +39,17 @@ export async function createCategory(input: {
   name: string;
   kind: "fixed" | "variable";
   color: string | null;
-}): Promise<ActionResult> {
+}): Promise<ActionResult & { id?: string }> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
   const { name, kind, color } = parsed.data;
-  await db.insert(categories).values({ name, kind, color: color ?? null });
+  const [created] = await db
+    .insert(categories)
+    .values({ name, kind, color: color ?? null })
+    .returning({ id: categories.id });
   revalidatePath("/settings/categories");
   revalidatePath("/");
-  return { errors: [] };
+  return { errors: [], id: String(created.id) };
 }
 
 export async function updateCategory(input: {

@@ -20,6 +20,14 @@ beforeEach(async () => {
 });
 
 describe("createCategory", () => {
+  it("作成したカテゴリのidを文字列で返す", async () => {
+    const res = await createCategory({ name: "趣味", kind: "variable", color: null });
+    expect(res.errors).toEqual([]);
+    expect(typeof res.id).toBe("string");
+    const rows = await testDb.select().from(categories);
+    expect(String(rows[0].id)).toBe(res.id);
+  });
+
   it("kind 'fixed'/'variable' で作成できる", async () => {
     const res = await createCategory({ name: "住居", kind: "fixed", color: "#111" });
     expect(res.errors).toEqual([]);

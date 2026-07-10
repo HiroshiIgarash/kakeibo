@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db/schema";
 import {
   transactions,
@@ -241,4 +241,29 @@ export async function loadBudgetSettingsView(db: Db, monthKey: string): Promise<
       inherited: inherited == null ? null : { amount: inherited.amount, fromMonth: inherited.month },
     };
   });
+}
+
+export type UnclassifiedGroup = {
+  storeName: string;
+  count: number;
+  totalAmount: number;
+};
+
+/** 未分類取引を店名でグルーピング（件数降順→店名昇順）。ホームのクイック分類用 */
+export async function loadUnclassifiedGroups(db: Db): Promise<UnclassifiedGroup[]> {
+  const rows = await db
+    .select({
+      storeName: transactions.storeName,
+      count: sql<string>`count(*)`,
+      totalAmount: sql<string>`sum(${transactions.amount})`,
+    })
+    .from(transactions)
+    .where(isNull(transactions.categoryId))
+    .groupBy(transactions.storeName)
+    .orderBy(sql`count(*) desc`, asc(transactions.storeName));
+  return rows.map((r) => ({
+    storeName: r.storeName,
+    count: Number(r.count),
+    totalAmount: Number(r.totalAmount),
+  }));
 }

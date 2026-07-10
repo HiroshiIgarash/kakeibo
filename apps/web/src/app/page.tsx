@@ -1,11 +1,17 @@
 import { db } from "@/db/client";
-import { loadMonthlySummaryView, loadRecentTransactions } from "@/lib/queries";
+import {
+  loadMonthlySummaryView,
+  loadRecentTransactions,
+  loadUnclassifiedGroups,
+  loadCategoryOptions,
+} from "@/lib/queries";
 import { loadUnreadNotifications } from "@/lib/notifications";
 import { jstToday, jstDateParts, jstDaysInMonth, jstDayOfMonth } from "@/lib/dates";
 import { SummaryCard } from "@/components/summary-card";
 import { BudgetList } from "@/components/budget-list";
 import { RecentTransactions } from "@/components/recent-transactions";
 import { NotificationList } from "@/components/notification-list";
+import { UnclassifiedQuickClassify } from "@/components/unclassified-quick-classify";
 
 // DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
 export const dynamic = "force-dynamic";
@@ -16,11 +22,14 @@ export default async function Home() {
   // 実行環境TZ（Vercel=UTC）に引きずられるため使わない（Global Constraint 5, spec 移行H3）。
   const { year, month } = jstDateParts(today);
 
-  const [monthlySummary, transactions, notifications] = await Promise.all([
-    loadMonthlySummaryView(db, year, month),
-    loadRecentTransactions(db, 5),
-    loadUnreadNotifications(db, 5),
-  ]);
+  const [monthlySummary, transactions, notifications, unclassifiedGroups, categoryOptions] =
+    await Promise.all([
+      loadMonthlySummaryView(db, year, month),
+      loadRecentTransactions(db, 5),
+      loadUnreadNotifications(db, 5),
+      loadUnclassifiedGroups(db),
+      loadCategoryOptions(db),
+    ]);
 
   // 今月の経過率（理想ペースライン位置）。JST基準で算出する
   const daysInMonth = jstDaysInMonth(year, month);
@@ -35,6 +44,7 @@ export default async function Home() {
           </p>
           <h1 className="text-2xl font-bold text-foreground mt-1">かけいぼ</h1>
         </header>
+        <UnclassifiedQuickClassify groups={unclassifiedGroups} categories={categoryOptions} />
         {notifications.length > 0 && <NotificationList notifications={notifications} />}
         <SummaryCard
           totalAmount={monthlySummary.totalAmount}

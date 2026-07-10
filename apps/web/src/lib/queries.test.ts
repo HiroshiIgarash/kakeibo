@@ -7,6 +7,7 @@ import {
   loadCategories,
   loadStoreMappings,
   loadBudgetSettingsView,
+  loadUnclassifiedGroups,
 } from "./queries";
 
 let db: TestDatabase;
@@ -152,5 +153,34 @@ describe("loadBudgetSettingsView", () => {
 
     const rows = await loadBudgetSettingsView(db, "2026-07-01");
     expect(rows[0].inherited).toBeNull();
+  });
+});
+
+describe("loadUnclassifiedGroups", () => {
+  it("未分類取引を店名でグルーピングし件数降順で返す", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    await db.insert(transactions).values([
+      { amount: 100, storeName: "ベルク", purchasedAt: new Date("2026-07-01T10:00:00+09:00"), categoryId: null, source: "email" },
+      { amount: 200, storeName: "ベルク", purchasedAt: new Date("2026-07-02T10:00:00+09:00"), categoryId: null, source: "email" },
+      { amount: 300, storeName: "セブン", purchasedAt: new Date("2026-07-03T10:00:00+09:00"), categoryId: null, source: "email" },
+      // 分類済みは対象外
+      { amount: 999, storeName: "ベルク", purchasedAt: new Date("2026-07-04T10:00:00+09:00"), categoryId: food.id, source: "email" },
+    ]);
+
+    const groups = await loadUnclassifiedGroups(db);
+    expect(groups).toEqual([
+      { storeName: "ベルク", count: 2, totalAmount: 300 },
+      { storeName: "セブン", count: 1, totalAmount: 300 },
+    ]);
+  });
+
+  it("同数の場合は店名昇順、未分類ゼロなら空配列", async () => {
+    expect(await loadUnclassifiedGroups(db)).toEqual([]);
+    await db.insert(transactions).values([
+      { amount: 100, storeName: "ローソン", purchasedAt: new Date("2026-07-01T10:00:00+09:00"), categoryId: null, source: "manual" },
+      { amount: 100, storeName: "セブン", purchasedAt: new Date("2026-07-01T11:00:00+09:00"), categoryId: null, source: "manual" },
+    ]);
+    const groups = await loadUnclassifiedGroups(db);
+    expect(groups.map((g) => g.storeName)).toEqual(["セブン", "ローソン"]);
   });
 });
