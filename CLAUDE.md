@@ -25,7 +25,6 @@ Next.js フルスタック（App Router + Drizzle ORM）構成で、旧 Rails/Gr
   - src/app/api/inbound-email/ → メール受信 Webhook
   - src/test/        → pglite テスト基盤
   - scripts/         → 1回きりの移行スクリプト等
-- apps/api/        → 旧 Rails アプリ（移行残作業1・2の完了後に削除予定。下記「移行残作業」参照）
 - docs/            → 要件定義書・設計書・実装計画
 
 ## アーキテクチャ要点
@@ -46,23 +45,16 @@ Next.js フルスタック（App Router + Drizzle ORM）構成で、旧 Rails/Gr
 - 外部入力（メール本文・フォーム）は必ず検証し、失敗ケースもテストで押さえる。
 
 ## 移行残作業
-Rails → Next.js フルスタックへのコード移行（アプリ実装）は完了しているが、以下のユーザー実行作業が
-未完了のため `apps/api` はまだリポジトリに残っている。
+1. **本番環境セットアップ**: Vercel / CloudMailin / Gmail 自動転送の設定。手順は
+   `docs/superpowers/plans/2026-07-10-morning-report.md` の Step 4〜6（または計画C の Task 9〜12）を参照。
 
-1. **Supabase セットアップ + 設定データ移行**: Supabase プロジェクトを作成し、
-   `scripts/migrate-settings.ts` を実行して categories / budgets / store_category_mappings /
-   budget_alert_settings / pace_alert_settings をローカル Rails DB（`RAILS_DATABASE_URL`）から
-   Supabase（`DIRECT_URL`）へ移行する。
-2. **`apps/api` 削除**: 残作業1の完了後に実施する。手順は
-   `docs/superpowers/plans/2026-07-09-migration-C-webhook-cleanup-deploy.md` の Task 6 を参照
-   （M2 ガード: この順序を逆にするとローカル Rails DB を起動できず移行スクリプトが動かせなくなる
-   ため、Task 6 は残作業1の完了を待って実行すること）。
-3. **本番環境セットアップ**: Vercel / CloudMailin / Gmail 自動転送の設定。手順は同計画書の
-   Task 9〜12 を参照。
+（完了済み: Supabase セットアップ・マイグレーション適用は 2026-07-10 実施。Rails 版は実運用データ
+未投入だったため設定データ移行は不要と確認し、`apps/api` は削除済み。カテゴリ・予算は Next.js 版で
+新規登録する。`scripts/migrate-settings.ts` は役目を終えたが1回きりスクリプトとして残置。）
 
 ## 進捗
-Rails → Next.js フルスタックへのコード移行は完了。上記「移行残作業」（デプロイ関連のユーザー作業と
-`apps/api` 削除）を残すのみ。以降の機能追加は apps/web 内で行う。
+Rails → Next.js フルスタックへのコード移行・`apps/api` 削除は完了。残りは本番環境セットアップのみ。
+以降の機能追加は apps/web 内で行う。
 
 参照: `docs/superpowers/specs/2026-07-09-rails-to-nextjs-migration-design.md`（移行設計書＝仕様の正）
 

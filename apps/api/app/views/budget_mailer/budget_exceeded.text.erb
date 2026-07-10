@@ -1,7 +1,0 @@
-【予算超過のお知らせ】
-
-<%= @category_name %>の予算を超過しました。
-
-予算上限：<%= number_with_delimiter(@budget.amount) %> 円
-現在の支出：<%= number_with_delimiter(@spent) %> 円
-超過額：<%= number_with_delimiter(@spent - @budget.amount) %> 円

@@ -3,8 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev:web": "pnpm --filter web dev",
-    "dev:api": "echo 'Rails API: cd apps/api && rails server'"
+    "dev:web": "pnpm --filter web dev"
   },
   "engines": {
     "node": ">=20",

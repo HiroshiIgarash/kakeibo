@@ -1,8 +1,1 @@
-{
-  "rubyLsp.bundleGemfile": "apps/api/Gemfile",
-  "rubyLsp.formatter": "rubocop",
-  "[ruby]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "Shopify.ruby-lsp"
-  }
-}
+{}

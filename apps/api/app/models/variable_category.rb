@@ -1,2 +1,0 @@
-class VariableCategory < Category
-end

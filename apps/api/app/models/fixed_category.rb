@@ -1,2 +1,0 @@
-class FixedCategory < Category
-end
