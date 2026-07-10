@@ -21,8 +21,13 @@ export type ActionResult = { errors: string[] };
 const kindEnum = z.enum(["fixed", "variable"]);
 const createSchema = z.object({
   name: z.string().trim().min(1, "カテゴリ名を入力してください"),
-  kind: kindEnum,
+  kind: kindEnum.optional(),
   color: z.union([z.string(), z.null()]).optional(),
+  parentId: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => (v == null || v === "" ? null : Number(v)))
+    .refine((v) => v == null || Number.isInteger(v), "親カテゴリIDが不正です"),
 });
 const updateSchema = z.object({
   id: z.string().min(1),
@@ -37,16 +42,32 @@ export async function getCategoryOptions(): Promise<CategoryOption[]> {
 
 export async function createCategory(input: {
   name: string;
-  kind: "fixed" | "variable";
-  color: string | null;
+  kind?: "fixed" | "variable";
+  color?: string | null;
+  parentId?: string | null;
 }): Promise<ActionResult & { id?: string }> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
-  const { name, kind, color } = parsed.data;
-  const [created] = await db
-    .insert(categories)
-    .values({ name, kind, color: color ?? null })
-    .returning({ id: categories.id });
+  const { name, kind, color, parentId } = parsed.data;
+
+  let values: { name: string; kind: "fixed" | "variable"; color: string | null; parentId: number | null };
+  if (parentId == null) {
+    if (kind == null) return { errors: ["種別を選択してください"] };
+    values = { name, kind, color: color ?? null, parentId: null };
+  } else {
+    const parent = (
+      await db
+        .select({ id: categories.id, kind: categories.kind, parentId: categories.parentId })
+        .from(categories)
+        .where(eq(categories.id, parentId))
+        .limit(1)
+    )[0];
+    if (!parent) return { errors: [`親カテゴリが見つかりません: ${parentId}`] };
+    if (parent.parentId != null) return { errors: ["子カテゴリの下にカテゴリは作成できません"] };
+    values = { name, kind: parent.kind, color: null, parentId };
+  }
+
+  const [created] = await db.insert(categories).values(values).returning({ id: categories.id });
   revalidatePath("/settings/categories");
   revalidatePath("/");
   return { errors: [], id: String(created.id) };

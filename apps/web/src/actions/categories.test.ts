@@ -46,6 +46,36 @@ describe("createCategory", () => {
   });
 });
 
+describe("createCategory (階層)", () => {
+  it("parentId 付きで子カテゴリを作成でき、kind は親からコピーされる", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "fixed" }).returning();
+    const res = await createCategory({ name: "お菓子", parentId: String(parent.id) });
+    expect(res.errors).toEqual([]);
+    const rows = await testDb.select().from(categories);
+    const child = rows.find((r) => r.parentId === parent.id)!;
+    expect(child).toMatchObject({ name: "お菓子", kind: "fixed", parentId: parent.id, color: null });
+    expect(res.id).toBe(String(child.id));
+  });
+
+  it("子カテゴリの下に子は作れない（孫禁止）", async () => {
+    const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    const [child] = await testDb.insert(categories).values({ name: "お菓子", kind: "variable", parentId: parent.id }).returning();
+    const res = await createCategory({ name: "駄菓子", parentId: String(child.id) });
+    expect(res.errors.length).toBeGreaterThan(0);
+    expect(await testDb.select().from(categories)).toHaveLength(2);
+  });
+
+  it("存在しない parentId はエラー", async () => {
+    const res = await createCategory({ name: "お菓子", parentId: "999999" });
+    expect(res.errors.length).toBeGreaterThan(0);
+  });
+
+  it("親作成で kind 未指定はエラー", async () => {
+    const res = await createCategory({ name: "食費" });
+    expect(res.errors.length).toBeGreaterThan(0);
+  });
+});
+
 describe("updateCategory", () => {
   it("名前・色を更新できる", async () => {
     const [cat] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
