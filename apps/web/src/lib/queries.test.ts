@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createTestDb, type TestDatabase } from "@/test/db";
-import { categories, transactions, storeCategoryMappings } from "@/db/schema";
+import { categories, transactions, storeCategoryMappings, budgets } from "@/db/schema";
 import {
   loadRecentTransactions,
   loadTransactionsByMonth,
   loadCategories,
   loadStoreMappings,
+  loadBudgetSettingsView,
 } from "./queries";
 
 let db: TestDatabase;
@@ -109,5 +110,31 @@ describe("loadStoreMappings", () => {
     expect(rows.map((m) => m.storeName)).toEqual(["イオン", "ローソン"]);
     expect(rows[0].category).toMatchObject({ name: "食費", color: "#fff" });
     expect(typeof rows[0].categoryId).toBe("string");
+  });
+});
+
+describe("loadBudgetSettingsView", () => {
+  it("全カテゴリがsortOrder順に並び、対象月の予算がjoinされる（未設定はnull）", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 1 }).returning();
+    const [daily] = await db.insert(categories).values({ name: "日用品", kind: "variable", sortOrder: 0 }).returning();
+    await db.insert(budgets).values({ categoryId: food.id, month: "2026-07-01", amount: 40000 });
+
+    const rows = await loadBudgetSettingsView(db, "2026-07-01");
+    expect(rows).toHaveLength(2);
+    // sortOrder順: 日用品(0) → 食費(1)
+    expect(rows[0]).toEqual({ categoryId: String(daily.id), categoryName: "日用品", budgetId: null, amount: null });
+    expect(rows[1].categoryName).toBe("食費");
+    expect(rows[1].amount).toBe(40000);
+    expect(typeof rows[1].budgetId).toBe("string");
+  });
+
+  it("対象月以外の予算はjoinされない", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
+    await db.insert(budgets).values({ categoryId: food.id, month: "2026-06-01", amount: 30000 });
+
+    const rows = await loadBudgetSettingsView(db, "2026-07-01");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].amount).toBeNull();
+    expect(rows[0].budgetId).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import {
   storeCategoryMappings,
   budgetAlertSettings,
   paceAlertSettings,
+  budgets,
 } from "@/db/schema";
 import { getMonthlySummary } from "@/lib/monthly-summary";
 import { jstMonthRange } from "@/lib/dates";
@@ -208,4 +209,30 @@ export async function loadAlertSettingsView(db: Db): Promise<AlertSettingsView> 
       category: { id: String(r.catId), name: r.catName },
     })),
   };
+}
+
+export type BudgetSettingRow = {
+  categoryId: string;
+  categoryName: string;
+  budgetId: string | null;
+  amount: number | null;
+};
+
+export async function loadBudgetSettingsView(db: Db, monthKey: string): Promise<BudgetSettingRow[]> {
+  const rows = await db
+    .select({
+      categoryId: categories.id,
+      categoryName: categories.name,
+      budgetId: budgets.id,
+      amount: budgets.amount,
+    })
+    .from(categories)
+    .leftJoin(budgets, and(eq(budgets.categoryId, categories.id), eq(budgets.month, monthKey)))
+    .orderBy(asc(categories.sortOrder), asc(categories.id));
+  return rows.map((r) => ({
+    categoryId: String(r.categoryId),
+    categoryName: r.categoryName,
+    budgetId: r.budgetId == null ? null : String(r.budgetId),
+    amount: r.amount ?? null,
+  }));
 }

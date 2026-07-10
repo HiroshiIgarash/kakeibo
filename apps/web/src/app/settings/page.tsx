@@ -1,4 +1,4 @@
-import { Bell, Tag, GitBranch, ChevronRight } from "lucide-react";
+import { Bell, Tag, GitBranch, Wallet, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
@@ -10,6 +10,12 @@ type SettingsSection = {
 };
 
 const SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    label: "予算設定",
+    icon: Wallet,
+    description: "カテゴリごとの月次予算を設定",
+    href: "/settings/budgets",
+  },
   {
     label: "アラート設定",
     icon: Bell,
