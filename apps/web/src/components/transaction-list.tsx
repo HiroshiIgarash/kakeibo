@@ -13,6 +13,8 @@ type Transaction = {
     id: string;
     name: string;
     color?: string | null;
+    parentId: string | null;
+    parentName: string | null;
   } | null;
 };
 

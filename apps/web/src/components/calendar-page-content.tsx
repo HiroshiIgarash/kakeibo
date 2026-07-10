@@ -21,6 +21,8 @@ type Transaction = {
     id: string;
     name: string;
     color?: string | null;
+    parentId: string | null;
+    parentName: string | null;
   } | null;
 };
 
@@ -40,7 +42,7 @@ function formatDayLabel(year: number, month: number, day: number): string {
 }
 
 export function CalendarPageContent({ transactions, year, month, budgetAmount }: Props) {
-  const { categories, selectedCategoryId, setSelectedCategoryId, filtered } =
+  const { parents, childrenOfSelected, selected, setSelected, filtered } =
     useCategoryFilter(transactions);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -87,9 +89,10 @@ export function CalendarPageContent({ transactions, year, month, budgetAmount }:
     <>
       <div className="flex flex-col gap-6">
         <CategoryFilterChips
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          onSelect={setSelectedCategoryId}
+          parents={parents}
+          childrenOfSelected={childrenOfSelected}
+          selected={selected}
+          onSelect={setSelected}
         />
 
         <CalendarView

@@ -19,6 +19,8 @@ type Transaction = {
     id: string;
     name: string;
     color?: string | null;
+    parentId: string | null;
+    parentName: string | null;
   } | null;
 };
 
@@ -27,7 +29,7 @@ type Props = {
 };
 
 export function TransactionsView({ transactions }: Props) {
-  const { categories, selectedCategoryId, setSelectedCategoryId, filtered } =
+  const { parents, childrenOfSelected, selected, setSelected, filtered } =
     useCategoryFilter(transactions);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
@@ -48,9 +50,10 @@ export function TransactionsView({ transactions }: Props) {
     <>
       <div className="flex flex-col gap-6">
         <CategoryFilterChips
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          onSelect={setSelectedCategoryId}
+          parents={parents}
+          childrenOfSelected={childrenOfSelected}
+          selected={selected}
+          onSelect={setSelected}
         />
 
         <TransactionList

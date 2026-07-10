@@ -6,6 +6,12 @@ import { Progress } from "@/components/ui/progress";
 // gql 由来の PaceStatus enum をローカルの文字列 union に置換
 type PaceStatus = "GREEN" | "YELLOW" | "RED";
 
+type CategoryChildBreakdown = {
+  categoryId: string;
+  categoryName: string;
+  amount: number;
+};
+
 type CategoryBreakdown = {
   categoryId: string;
   categoryName: string;
@@ -14,6 +20,7 @@ type CategoryBreakdown = {
   budgetAmount?: number | null;
   remainingAmount?: number | null;
   dailyAmount?: number | null;
+  children?: CategoryChildBreakdown[];
 };
 
 type Props = {
@@ -94,6 +101,22 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
                     <p className="mt-2 text-xs text-muted-foreground font-mono">
                       残り ¥{(b.remainingAmount ?? 0).toLocaleString()} · 1日あたり ¥{b.dailyAmount.toLocaleString()}
                     </p>
+                  )}
+                  {b.children != null && b.children.length > 0 && (
+                    <details className="mt-2 text-xs text-muted-foreground">
+                      <summary className="cursor-pointer select-none">内訳</summary>
+                      <ul role="list" className="mt-1 flex flex-col gap-1">
+                        {b.children.map((child) => (
+                          <li
+                            key={child.categoryId}
+                            className="list-none flex items-center justify-between"
+                          >
+                            <span>{child.categoryName}</span>
+                            <span className="font-mono">¥{child.amount.toLocaleString()}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   )}
                 </CardContent>
               </Card>
