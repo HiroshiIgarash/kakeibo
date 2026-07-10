@@ -284,7 +284,7 @@ function ParentCard({ node }: { node: CategoryNode }) {
     setDeleting(true);
     const result = await deleteCategory({ id: node.id });
     setDeleting(false);
-    if (result.errors.length > 0) { setError(result.errors.join(", ")); return; }
+    if (result.errors.length > 0) { setError(result.errors.join(", ")); setConfirmDelete(false); return; }
     router.refresh();
   }
 
@@ -376,7 +376,7 @@ function ParentCard({ node }: { node: CategoryNode }) {
             )}
           </div>
         )}
-        {error && !editing && !confirmDelete && <p className="text-xs text-red-500">{error}</p>}
+        {error && !editing && <p className="text-xs text-red-500">{error}</p>}
 
         {node.children.length > 0 && (
           <div className="flex flex-col divide-y divide-border/50 border-t border-border/50 pt-1">
