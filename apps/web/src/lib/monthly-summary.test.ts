@@ -57,9 +57,11 @@ describe("getMonthlySummary", () => {
     expect(dailyB.amount).toBe(1000);
     expect(dailyB.percentage).toBeCloseTo(16.7, 1);
 
-    // 過去月なのでペースは null
+    // 過去月: ペース系は null だが予算情報は付く（過去月の進捗表示用）
     expect(foodB.paceStatus).toBeNull();
-    expect(foodB.budgetAmount).toBeNull();
+    expect(foodB.budgetAmount).toBe(30_000);
+    expect(foodB.remainingAmount).toBe(25_000);
+    expect(foodB.dailyAmount).toBeNull();
   });
 
   it("取引ゼロなら合計0・内訳空", async () => {
@@ -152,6 +154,21 @@ describe("getMonthlySummary: 親カテゴリ単位集計と子内訳", () => {
     const foodB = r.categoryBreakdowns.find((b) => b.categoryName === "食費")!;
     expect(foodB.amount).toBe(5000);
     expect(foodB.children).toEqual([{ categoryId: snack.id, categoryName: "お菓子", amount: 3000 }]);
+  });
+
+  it("過去月で実績が予算超過なら remainingAmount がマイナス", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    await db.insert(budgets).values({ categoryId: food.id, month: "2024-01-01", amount: 10_000 });
+    await db.insert(transactions).values({
+      amount: 13000, storeName: "a", purchasedAt: jst("2024-01-10T10:00:00+09:00"), categoryId: food.id, source: "manual",
+    });
+
+    const r = await getMonthlySummary(db, 2024, 1);
+    const foodB = r.categoryBreakdowns.find((b) => b.categoryName === "食費")!;
+    expect(foodB.budgetAmount).toBe(10_000);
+    expect(foodB.remainingAmount).toBe(-3000);
+    expect(foodB.paceStatus).toBeNull();
+    expect(foodB.dailyAmount).toBeNull();
   });
 
   it("親の有効予算に対して子取引合算でペース計算される", async () => {

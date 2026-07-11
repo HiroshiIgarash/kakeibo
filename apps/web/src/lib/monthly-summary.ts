@@ -120,9 +120,13 @@ export async function getMonthlySummary(
     let rAmount: number | null = null;
     let dAmount: number | null = null;
 
-    if (paceDate) {
-      const budget = effectiveBudgets.get(categoryId);
-      if (budget) {
+    const budget = effectiveBudgets.get(categoryId);
+    if (budget) {
+      // 予算情報はどの月でも返す（過去月の支出ページで進捗表示するため）。
+      // ペース系（バッジ・日割り）は当月のみ意味を持つ。
+      bAmount = budget.amount;
+      rAmount = budget.amount - amount; // 月全体の実績に対する残額（マイナス可）
+      if (paceDate) {
         // 親単位のペースは親+全子の取引合算で判定する
         const targetIds = await getAlertTargetCategoryIds(db, categoryId);
         const spentRow = await db
@@ -142,8 +146,7 @@ export async function getMonthlySummary(
           date: paceDate,
         });
         paceStatus = pace.paceStatus;
-        bAmount = budget.amount;
-        rAmount = pace.remainingAmount;
+        rAmount = pace.remainingAmount; // 当月は従来どおり paceDate 基準
         dAmount = pace.dailyAmount;
       }
     }
