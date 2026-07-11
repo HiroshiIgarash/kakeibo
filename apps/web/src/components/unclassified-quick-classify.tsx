@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { upsertStoreMapping } from "@/actions/mappings";
-import { createCategory } from "@/actions/categories";
+import { createCategory, createCategoryWithParent } from "@/actions/categories";
+import { PRESET_COLORS, pickUnusedColor } from "@/lib/category-colors";
 import type { UnclassifiedGroup, CategoryOption, ParentCategoryOption } from "@/lib/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Loader2, Plus, Tag } from "lucide-react";
 import { Input, NativeSelect } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 /** 子カテゴリ一覧を親名でグルーピングする（挿入順 = loader のソート順を保持） */
 function groupByParent(categories: CategoryOption[]): Map<string, CategoryOption[]> {
@@ -27,6 +29,13 @@ function groupByParent(categories: CategoryOption[]): Map<string, CategoryOption
 // ────────────────────────────────────────────────────────────────
 // カテゴリ選択パネル（新規カテゴリ作成込み）
 // ────────────────────────────────────────────────────────────────
+const NEW_PARENT_VALUE = "__new__";
+
+const KIND_OPTIONS: { value: "fixed" | "variable"; label: string }[] = [
+  { value: "variable", label: "変動費" },
+  { value: "fixed", label: "固定費" },
+];
+
 function CategoryPicker({
   categories,
   parentOptions,
@@ -38,11 +47,18 @@ function CategoryPicker({
   onPick: (categoryId: string) => void;
   busy: boolean;
 }) {
-  const [creating, setCreating] = useState(false);
-  const [newParentId, setNewParentId] = useState(parentOptions[0]?.id ?? "");
+  const hasParents = parentOptions.length > 0;
+  // 親カテゴリが1つもなければ、最初から新規親モードでフォームを開く
+  const [creating, setCreating] = useState(!hasParents);
+  const [parentValue, setParentValue] = useState(hasParents ? parentOptions[0].id : NEW_PARENT_VALUE);
+  const [newParentName, setNewParentName] = useState("");
+  const [newKind, setNewKind] = useState<"fixed" | "variable">("variable");
+  const [newColor, setNewColor] = useState(() => pickUnusedColor(parentOptions.map((p) => p.color)));
   const [newName, setNewName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creatingBusy, setCreatingBusy] = useState(false);
+
+  const isNewParent = parentValue === NEW_PARENT_VALUE;
 
   async function handleCreate() {
     const name = newName.trim();
@@ -50,13 +66,16 @@ function CategoryPicker({
       setError("カテゴリ名を入力してください");
       return;
     }
-    if (!newParentId) {
-      setError("親カテゴリを選択してください");
+    const parentName = newParentName.trim();
+    if (isNewParent && !parentName) {
+      setError("親カテゴリ名を入力してください");
       return;
     }
     setError(null);
     setCreatingBusy(true);
-    const result = await createCategory({ name, parentId: newParentId });
+    const result = isNewParent
+      ? await createCategoryWithParent({ parentName, kind: newKind, color: newColor, childName: name })
+      : await createCategory({ name, parentId: parentValue });
     setCreatingBusy(false);
     if (result.errors.length > 0 || !result.id) {
       setError(result.errors.join(", ") || "カテゴリの作成に失敗しました");
@@ -93,49 +112,88 @@ function CategoryPicker({
         </div>
       ))}
 
-      {parentOptions.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          先に設定画面で親カテゴリを作成してください
-        </p>
-      ) : (
-        <div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setCreating((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <Plus className="w-3 h-3" />
-            新しいカテゴリ
-          </button>
+      <div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setCreating((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          <Plus className="w-3 h-3" />
+          新しいカテゴリ
+        </button>
 
-          {creating && (
-            <div className="flex flex-col gap-2 p-3 mt-2 rounded-lg bg-muted/30 border border-border">
-              <NativeSelect
-                value={newParentId}
-                onChange={(e) => setNewParentId(e.target.value)}
-              >
-                {parentOptions.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </NativeSelect>
-              <Input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="カテゴリ名（例：外食）"
-                autoFocus
-              />
-              <div className="flex justify-end">
-                <Button type="button" size="sm" disabled={creatingBusy || busy} onClick={handleCreate}>
-                  {creatingBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "作成して分類"}
-                </Button>
-              </div>
-              {error && <p className="text-xs text-red-500">{error}</p>}
+        {creating && (
+          <div className="flex flex-col gap-2 p-3 mt-2 rounded-lg bg-muted/30 border border-border">
+            <NativeSelect
+              value={parentValue}
+              onChange={(e) => setParentValue(e.target.value)}
+            >
+              {parentOptions.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+              <option value={NEW_PARENT_VALUE}>＋新しい親カテゴリ</option>
+            </NativeSelect>
+
+            {isNewParent && (
+              <>
+                <Input
+                  type="text"
+                  value={newParentName}
+                  onChange={(e) => setNewParentName(e.target.value)}
+                  placeholder="親カテゴリ名（例：食費）"
+                />
+                <div className="flex gap-2">
+                  {KIND_OPTIONS.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setNewKind(t.value)}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs rounded-md border transition-colors",
+                        newKind === t.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-transparent text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewColor(c)}
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 transition-all",
+                        newColor === c ? "border-foreground scale-110" : "border-transparent"
+                      )}
+                      style={{ backgroundColor: c }}
+                      aria-label={c}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            <Input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="カテゴリ名（例：外食）"
+              autoFocus
+            />
+            <div className="flex justify-end">
+              <Button type="button" size="sm" disabled={creatingBusy || busy} onClick={handleCreate}>
+                {creatingBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "作成して分類"}
+              </Button>
             </div>
-          )}
-        </div>
-      )}
+            {error && <p className="text-xs text-red-500">{error}</p>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
