@@ -46,6 +46,7 @@ export default async function BudgetSettingsPage({
           monthLabel={`${year}年${month}月`}
           prevHref={`/settings/budgets?month=${monthParam(prev.year, prev.month)}`}
           nextHref={`/settings/budgets?month=${monthParam(next.year, next.month)}`}
+          planHref={`/settings/budgets/plan?month=${monthParam(year, month)}`}
         />
       </div>
     </main>

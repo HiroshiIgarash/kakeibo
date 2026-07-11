@@ -92,9 +92,10 @@ type Props = {
   monthLabel: string; // 'YYYY年M月'
   prevHref: string;
   nextHref: string;
+  planHref: string;
 };
 
-export function BudgetSettingsContent({ rows, month, monthLabel, prevHref, nextHref }: Props) {
+export function BudgetSettingsContent({ rows, month, monthLabel, prevHref, nextHref, planHref }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
@@ -111,6 +112,13 @@ export function BudgetSettingsContent({ rows, month, monthLabel, prevHref, nextH
           <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
+
+      <Link
+        href={planHref}
+        className="inline-flex items-center justify-center rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+      >
+        予算をまとめて調整
+      </Link>
 
       <div className="flex flex-col gap-2">
         {rows.length === 0 ? (
