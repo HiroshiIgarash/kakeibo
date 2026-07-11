@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { budgetUsage } from "@/lib/budget-usage";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,23 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
   const parentBreakdowns = breakdowns.filter(
     (b): b is CategoryBreakdown & { budgetAmount: number } => b.budgetAmount != null
   );
+
+  if (parentBreakdowns.length === 0) {
+    return (
+      <div>
+        <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase mb-3">
+          カテゴリ別予算
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          カテゴリ別の予算が未設定です。
+          <Link href="/settings/budgets" className="underline underline-offset-2 hover:text-foreground">
+            予算設定
+          </Link>
+          から登録できます。
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
