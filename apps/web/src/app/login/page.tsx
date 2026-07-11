@@ -23,7 +23,7 @@ export default function LoginPage() {
               name="password"
               required
               autoComplete="current-password"
-              className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-sm focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
+              className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
             />
           </label>
           {state.error && (

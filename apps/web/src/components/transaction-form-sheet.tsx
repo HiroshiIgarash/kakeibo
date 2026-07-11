@@ -147,7 +147,7 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
             placeholder="例: スーパーマーケット"
             required
             autoComplete="off"
-            className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
+            className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
           />
         </label>
 
@@ -168,7 +168,7 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
               required
               min={1}
               inputMode="numeric"
-              className="w-full pl-7 pr-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-sm font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
+              className="w-full pl-7 pr-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
             />
           </div>
         </label>
@@ -183,7 +183,7 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
             value={purchasedAt}
             onChange={(e) => setPurchasedAt(e.target.value)}
             required
-            className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-sm focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
+            className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
           />
         </label>
 
@@ -196,7 +196,7 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-sm focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors appearance-none"
+              className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors appearance-none"
             >
               <option value="">未分類</option>
               {Array.from(groupByParent(categories)).map(([parentName, children]) => (

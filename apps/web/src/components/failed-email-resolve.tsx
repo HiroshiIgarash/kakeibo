@@ -7,6 +7,7 @@ import type { FailedInboundEmailView } from "@/lib/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Loader2, MailWarning } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 // ────────────────────────────────────────────────────────────────
 // 失敗メール行（展開して金額入力→登録 / 無視）
@@ -70,35 +71,35 @@ function FailedRow({ email, open, onToggle }: { email: FailedInboundEmailView; o
       {open && (
         <div className="flex flex-col gap-2 pt-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-10">金額</span>
+            <span className="text-xs text-muted-foreground w-10 shrink-0">金額</span>
             <span className="text-xs text-muted-foreground">¥</span>
-            <input
+            <Input
               type="number"
               inputMode="numeric"
               min={1}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="実際の引落額"
-              className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 text-right"
               autoFocus
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-10">店名</span>
-            <input
+            <span className="text-xs text-muted-foreground w-10 shrink-0">店名</span>
+            <Input
               type="text"
               value={storeName}
               onChange={(e) => setStoreName(e.target.value)}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-10">日付</span>
-            <input
+            <span className="text-xs text-muted-foreground w-10 shrink-0">日付</span>
+            <Input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1"
             />
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}

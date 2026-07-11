@@ -8,6 +8,7 @@ import type { UnclassifiedGroup, CategoryOption, ParentCategoryOption } from "@/
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Loader2, Plus, Tag } from "lucide-react";
+import { Input, NativeSelect } from "@/components/ui/input";
 
 /** 子カテゴリ一覧を親名でグルーピングする（挿入順 = loader のソート順を保持） */
 function groupByParent(categories: CategoryOption[]): Map<string, CategoryOption[]> {
@@ -79,7 +80,7 @@ function CategoryPicker({
                 type="button"
                 disabled={busy}
                 onClick={() => onPick(c.id)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-3 py-1.5 text-xs hover:bg-muted transition-colors disabled:opacity-50"
               >
                 <span
                   className="w-2 h-2 rounded-full"
@@ -110,21 +111,19 @@ function CategoryPicker({
 
           {creating && (
             <div className="flex flex-col gap-2 p-3 mt-2 rounded-lg bg-muted/30 border border-border">
-              <select
+              <NativeSelect
                 value={newParentId}
                 onChange={(e) => setNewParentId(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {parentOptions.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-              </select>
-              <input
+              </NativeSelect>
+              <Input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="カテゴリ名（例：外食）"
-                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 autoFocus
               />
               <div className="flex justify-end">

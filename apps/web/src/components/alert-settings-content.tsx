@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 type BudgetAlertSettingData = {
   id: string;
@@ -85,25 +86,23 @@ function BudgetAlertRow({
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1 flex-1">
             <span className="text-xs text-muted-foreground">閾値1（%）</span>
-            <input
+            <Input
               type="number"
               min={1}
               max={200}
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="80"
             />
           </label>
           <label className="flex flex-col gap-1 flex-1">
             <span className="text-xs text-muted-foreground">閾値2（%、任意）</span>
-            <input
+            <Input
               type="number"
               min={1}
               max={200}
               value={threshold2}
               onChange={(e) => setThreshold2(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="100"
             />
           </label>
@@ -179,25 +178,23 @@ function PaceAlertRow({
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1 flex-1">
             <span className="text-xs text-muted-foreground">ペース閾値（%、100超）</span>
-            <input
+            <Input
               type="number"
               min={101}
               max={500}
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="110"
             />
           </label>
           <label className="flex flex-col gap-1 flex-1">
             <span className="text-xs text-muted-foreground">開始日（日以降）</span>
-            <input
+            <Input
               type="number"
               min={1}
               max={28}
               value={activeFromDay}
               onChange={(e) => setActiveFromDay(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="5"
             />
           </label>

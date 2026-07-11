@@ -8,6 +8,7 @@ import type { BudgetSettingRow } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 /** 'YYYY-MM-01' → 'YYYY年M月' */
 function monthKeyLabel(monthKey: string): string {
@@ -58,14 +59,14 @@ function BudgetRow({ row, month }: { row: BudgetSettingRow; month: string }) {
         </p>
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground">¥</span>
-          <input
+          <Input
             type="number"
             inputMode="numeric"
             min={1}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={row.inherited ? String(row.inherited.amount) : "未設定"}
-            className="w-28 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-28 text-right"
           />
         </div>
         <Button type="button" size="sm" disabled={saving || !dirty} onClick={handleSave}>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input, NativeSelect } from "@/components/ui/input";
 
 // ────────────────────────────────────────────────────────────────
 // Types
@@ -67,21 +68,19 @@ function AddMappingForm({
       <p className="text-sm font-medium">新規マッピング</p>
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">店名（メール取り込み時の店名と一致）</span>
-        <input
+        <Input
           type="text"
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
           placeholder="例：セブンイレブン"
-          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           autoFocus
         />
       </div>
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">カテゴリ</span>
-        <select
+        <NativeSelect
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {Array.from(groupByParent(categories)).map(([parentName, children]) => (
             <optgroup key={parentName} label={parentName}>
@@ -90,7 +89,7 @@ function AddMappingForm({
               ))}
             </optgroup>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       {error && <p className="text-xs text-red-500">{error}</p>}
       <div className="flex gap-2 justify-end">
@@ -146,10 +145,9 @@ function MappingRow({
         <p className="text-sm font-medium">{mapping.storeName}</p>
         <div className="flex flex-col gap-1">
           <span className="text-xs text-muted-foreground">カテゴリ</span>
-          <select
+          <NativeSelect
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             autoFocus
           >
             {Array.from(groupByParent(categories)).map(([parentName, children]) => (
@@ -159,7 +157,7 @@ function MappingRow({
                 ))}
               </optgroup>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="flex gap-2 justify-end">

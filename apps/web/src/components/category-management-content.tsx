@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 // ────────────────────────────────────────────────────────────────
 // 定数
@@ -52,12 +53,11 @@ function AddCategoryForm({ onDone }: { onDone: () => void }) {
       <p className="text-sm font-medium">新規カテゴリ</p>
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">カテゴリ名</span>
-        <input
+        <Input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="例：食費"
-          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           autoFocus
         />
       </div>
@@ -73,7 +73,7 @@ function AddCategoryForm({ onDone }: { onDone: () => void }) {
                 "flex-1 py-1.5 text-xs rounded-md border transition-colors",
                 kind === t.value
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+                  : "border-border bg-transparent text-muted-foreground hover:bg-muted"
               )}
             >
               {t.label}
@@ -136,12 +136,12 @@ function AddChildForm({ parentId, onDone }: { parentId: string; onDone: () => vo
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 pl-4">
       <div className="flex items-center gap-2">
-        <input
+        <Input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="子カテゴリ名"
-          className="flex-1 min-w-0 rounded-md border border-input bg-background px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex-1 min-w-0 px-2.5 py-1"
           autoFocus
         />
         <Button type="button" variant="ghost" size="sm" onClick={onDone} className="h-7 w-7 p-0">
@@ -192,11 +192,11 @@ function ChildRow({ child }: { child: { id: string; name: string } }) {
     return (
       <form onSubmit={handleUpdate} className="flex flex-col gap-1 pl-4 py-1">
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 min-w-0 rounded-md border border-input bg-background px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex-1 min-w-0 px-2.5 py-1"
             autoFocus
           />
           <Button
@@ -297,11 +297,10 @@ function ParentCard({ node }: { node: CategoryNode }) {
           <form onSubmit={handleUpdate} className="flex flex-col gap-3 p-2 rounded-lg border border-primary/30 bg-muted/20">
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">カテゴリ名</span>
-              <input
+              <Input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 autoFocus
               />
             </div>
