@@ -1,26 +1,13 @@
 import { db } from "@/db/client";
 import { loadBudgetSettingsView } from "@/lib/queries";
 import { BudgetSettingsContent } from "@/components/budget-settings-content";
-import { jstDateParts, jstToday, monthKey } from "@/lib/dates";
+import { monthKey } from "@/lib/dates";
+import { resolveMonthParam, monthParam } from "@/lib/month-param";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 // DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
 export const dynamic = "force-dynamic";
-
-/** `?month=YYYY-MM` を解決する。不正・未指定は当月（JST）へフォールバック */
-function resolveMonth(param: string | undefined): { year: number; month: number } {
-  if (param && /^\d{4}-(0[1-9]|1[0-2])$/.test(param)) {
-    const [year, month] = param.split("-").map(Number);
-    return { year, month };
-  }
-  const today = jstDateParts(jstToday());
-  return { year: today.year, month: today.month };
-}
-
-function monthParam(year: number, month: number): string {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
 
 export default async function BudgetSettingsPage({
   searchParams,
@@ -28,7 +15,7 @@ export default async function BudgetSettingsPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const { month: monthQuery } = await searchParams;
-  const { year, month } = resolveMonth(monthQuery);
+  const { year, month } = resolveMonthParam(monthQuery);
   const mKey = monthKey(year, month);
 
   const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
