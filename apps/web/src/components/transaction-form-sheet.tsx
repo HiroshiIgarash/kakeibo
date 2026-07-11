@@ -69,8 +69,11 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? "");
   const [errors, setErrors] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [confirmUncategorized, setConfirmUncategorized] = useState(false);
 
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  // null = ロード中。ロード完了まで送信不可にして「選択肢が届く前に未分類で確定」を防ぐ
+  const [categories, setCategories] = useState<CategoryOption[] | null>(null);
+  const categoriesLoading = categories === null;
   useEffect(() => {
     let active = true;
     getCategoryOptions().then((cats) => { if (active) setCategories(cats); });
@@ -87,6 +90,10 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
     const parsedAmount = parseInt(amount, 10);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setErrors(["金額は1以上の数値を入力してください"]);
+      return;
+    }
+    if (!categoryId && !confirmUncategorized) {
+      setConfirmUncategorized(true);
       return;
     }
     setSubmitting(true);
@@ -147,6 +154,7 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
             placeholder="例: スーパーマーケット"
             required
             autoComplete="off"
+            autoFocus={!isEdit}
             className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors"
           />
         </label>
@@ -195,19 +203,29 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
           <div className="relative">
             <select
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors appearance-none"
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setConfirmUncategorized(false);
+              }}
+              disabled={categoriesLoading}
+              className="w-full px-3.5 py-3 rounded-xl border border-border bg-muted/30 text-foreground text-base focus:outline-none focus:border-foreground/25 focus:bg-background transition-colors appearance-none disabled:opacity-60"
             >
-              <option value="">未分類</option>
-              {Array.from(groupByParent(categories)).map(([parentName, children]) => (
-                <optgroup key={parentName} label={parentName}>
-                  {children.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
+              {categoriesLoading ? (
+                <option value={categoryId}>読み込み中...</option>
+              ) : (
+                <>
+                  <option value="">未分類</option>
+                  {Array.from(groupByParent(categories)).map(([parentName, children]) => (
+                    <optgroup key={parentName} label={parentName}>
+                      {children.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
-                </optgroup>
-              ))}
+                </>
+              )}
             </select>
             <svg
               className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
@@ -229,13 +247,26 @@ function FormContent({ transaction, defaultDate, onClose }: FormContentProps) {
           </p>
         )}
 
+        {/* Uncategorized warning */}
+        {confirmUncategorized && !categoryId && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl px-3.5 py-2.5">
+            カテゴリが未分類のままです。カテゴリ別の予算には計上されません。
+          </p>
+        )}
+
         {/* Submit button */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || categoriesLoading}
           className="mt-1 w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
-          {loading ? "保存中..." : isEdit ? "更新する" : "追加する"}
+          {loading
+            ? "保存中..."
+            : confirmUncategorized && !categoryId
+              ? "未分類のまま保存する"
+              : isEdit
+                ? "更新する"
+                : "追加する"}
         </button>
 
         {/* Delete */}
