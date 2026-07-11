@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { budgetUsage } from "@/lib/budget-usage";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -59,10 +60,7 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
       </h2>
       <ul role="list" className="flex flex-col gap-3">
         {parentBreakdowns.map((b) => {
-          const percent =
-            b.budgetAmount > 0
-              ? Math.min(Math.round((b.amount / b.budgetAmount) * 100), 100)
-              : 0;
+          const usage = budgetUsage(b.amount, b.budgetAmount);
           const pace = b.paceStatus ? paceConfig[b.paceStatus] : null;
           const indicatorClass = b.paceStatus ? paceIndicatorClass[b.paceStatus] : undefined;
 
@@ -82,12 +80,15 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
                     </span>
                     <span className="text-xs text-muted-foreground font-mono">
                       / ¥{b.budgetAmount.toLocaleString()}
+                      {usage.hasBudget && usage.isOver && (
+                        <span className="text-red-400 font-medium"> · {usage.percent}%</span>
+                      )}
                     </span>
                   </div>
                   {/* プログレスバー + 理想ペースライン縦線 */}
                   <div className="relative">
                     <Progress
-                      value={percent}
+                      value={usage.hasBudget ? usage.barPercent : 0}
                       indicatorClassName={indicatorClass}
                       aria-label={`${b.categoryName} 予算使用率`}
                     />
