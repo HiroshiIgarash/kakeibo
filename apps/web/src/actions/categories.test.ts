@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { createTestDb } from "@/test/db";
+import { createTestDb, resetTestDb } from "@/test/db";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 // db シングルトンをテストDBへ差し替える。createTestDb() は { db, client, teardown } を返す
 // （計画A提供の戻り値シェイプ）ので db だけを testDb として使う。
-const { db: testDb, teardown } = await createTestDb();
+const { db: testDb, client, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
 const { categories, transactions, budgetAlerts } = await import("@/db/schema");
@@ -16,7 +16,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  for (const t of [transactions, budgetAlerts, categories]) await testDb.delete(t);
+  await resetTestDb(client);
 });
 
 describe("createCategory", () => {

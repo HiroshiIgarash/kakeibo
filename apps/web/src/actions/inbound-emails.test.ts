@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb } from "@/test/db";
+import { createTestDb, resetTestDb } from "@/test/db";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { db: testDb, teardown } = await createTestDb();
+const { db: testDb, client, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
 const { inboundEmails, transactions, notifications, categories, storeCategoryMappings, unclassifiedAlerts } =
@@ -32,12 +32,7 @@ async function seedFailed(): Promise<number> {
 }
 
 beforeEach(async () => {
-  await testDb.delete(notifications);
-  await testDb.delete(unclassifiedAlerts);
-  await testDb.delete(inboundEmails);
-  await testDb.delete(transactions);
-  await testDb.delete(storeCategoryMappings);
-  await testDb.delete(categories);
+  await resetTestDb(client);
 });
 
 describe("resolveFailedInboundEmail", () => {

@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { createTestDb } from "@/test/db";
+import { createTestDb, resetTestDb } from "@/test/db";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 // db シングルトンをテストDBへ差し替える。createTestDb() は { db, client, teardown } を返す
 // （計画A提供の戻り値シェイプ）ので db だけを testDb として使う。
-const { db: testDb, teardown } = await createTestDb();
+const { db: testDb, client, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
-const { categories, transactions, storeCategoryMappings, unclassifiedAlerts, notifications } =
+const { categories, transactions, storeCategoryMappings, unclassifiedAlerts } =
   await import("@/db/schema");
 const { upsertStoreMapping, deleteStoreMapping } = await import("./mappings");
 const { normalizeStoreName } = await import("@/lib/store-name");
@@ -19,9 +19,7 @@ afterAll(async () => {
 
 let catId: number;
 beforeEach(async () => {
-  for (const t of [notifications, unclassifiedAlerts, transactions, storeCategoryMappings, categories]) {
-    await testDb.delete(t);
-  }
+  await resetTestDb(client);
   const [parent] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
   const [c] = await testDb
     .insert(categories)

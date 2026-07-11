@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { createTestDb } from "@/test/db";
+import { createTestDb, resetTestDb } from "@/test/db";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { db: testDb, teardown } = await createTestDb();
+const { db: testDb, client, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
 const { categories, budgets } = await import("@/db/schema");
@@ -15,8 +15,7 @@ afterAll(async () => {
 
 let catId: number;
 beforeEach(async () => {
-  await testDb.delete(budgets);
-  await testDb.delete(categories);
+  await resetTestDb(client);
   const [c] = await testDb.insert(categories).values({ name: "食費", kind: "variable", sortOrder: 0 }).returning();
   catId = c.id;
 });
