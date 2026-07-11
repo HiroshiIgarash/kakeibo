@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { jstToday, jstDateParts } from "@/lib/dates";
 
 type Props = {
   year: number;
@@ -27,8 +28,9 @@ export function MonthNavigator({ year, month, basePath = "transactions" }: Props
   const qs = searchParams.toString();
   const suffix = qs ? `?${qs}` : "";
 
-  const now = new Date();
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  // 当月判定は JST 固定（実行環境TZに依存させない。Vercel は UTC）
+  const nowParts = jstDateParts(jstToday());
+  const isCurrentMonth = year === nowParts.year && month === nowParts.month;
 
   return (
     <div className="flex items-center justify-between">

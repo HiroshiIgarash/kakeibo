@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { jstToday, jstDateParts } from "@/lib/dates";
 
 type Transaction = {
   id: string;
@@ -73,9 +74,10 @@ export function CalendarView({ transactions, year, month, budgetAmount, selected
   // 日割り予算：月予算 ÷ 日数（未設定の場合は正規化しない）
   const dailyBudget  = budgetAmount > 0 ? budgetAmount / daysInMonth : null;
   const firstWeekday = new Date(year, month - 1, 1).getDay();
-  const today        = new Date();
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
-  const todayDay     = isCurrentMonth ? today.getDate() : -1;
+  // 今日の判定は JST 固定（実行環境TZに依存させない。Vercel は UTC）
+  const todayParts   = jstDateParts(jstToday());
+  const isCurrentMonth = todayParts.year === year && todayParts.month === month;
+  const todayDay     = isCurrentMonth ? todayParts.day : -1;
   const totalRows    = Math.ceil((firstWeekday + daysInMonth) / 7);
 
   return (
