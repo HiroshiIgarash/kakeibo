@@ -54,14 +54,16 @@ export async function getMonthlySummary(
   // カテゴリ別集計（category_id が null の取引は inner join で除外される）。
   // 子カテゴリの取引は親単位で集約するため、親情報を self-join で補完した子行のまま取得し、
   // JS 側で親id（子なら親id・親自身なら自id）に集約する。
+  // 親子の合成（coalesce 相当）は SQL でなく JS で行う: 生SQL断片は drizzle の型マッパーを
+  // 通らず、postgres-js が bigint を string で返す（pglite は number）ため、number キーの
+  // 有効予算 Map と照合できず本番のみ budgetAmount が全 null になるバグの再発防止。
   const parentCategories = alias(categories, "parent_categories");
   const grouped = await db
     .select({
       childId: transactions.categoryId,
       childName: categories.name,
-      parentId: sql<number>`coalesce(${categories.parentId}, ${categories.id})`,
-      parentName: sql<string>`coalesce(${parentCategories.name}, ${categories.name})`,
-      isChild: sql<boolean>`${categories.parentId} is not null`,
+      parentIdRaw: categories.parentId,
+      parentName: parentCategories.name,
       amount: sql<string>`sum(${transactions.amount})`,
     })
     .from(transactions)
@@ -85,14 +87,17 @@ export async function getMonthlySummary(
   const parentAggs = new Map<number, ParentAgg>();
   for (const row of grouped) {
     const amount = Number(row.amount);
-    let agg = parentAggs.get(row.parentId);
+    const isChild = row.parentIdRaw != null;
+    const parentId = row.parentIdRaw ?? (row.childId as number);
+    const parentName = row.parentName ?? row.childName;
+    let agg = parentAggs.get(parentId);
     if (!agg) {
-      agg = { categoryId: row.parentId, categoryName: row.parentName, amount: 0, children: [] };
-      parentAggs.set(row.parentId, agg);
+      agg = { categoryId: parentId, categoryName: parentName, amount: 0, children: [] };
+      parentAggs.set(parentId, agg);
     }
     agg.amount += amount;
     // 親への直付け取引は親行の amount にのみ算入し、children には含めない
-    if (row.isChild) {
+    if (isChild) {
       agg.children.push({ categoryId: row.childId as number, categoryName: row.childName, amount });
     }
   }
