@@ -29,6 +29,8 @@ export type MonthlySummary = {
   totalAmount: number;
   budgetAmount: number;
   remainingAmount: number;
+  /** カテゴリ未設定の取引合計（「未分類」行の表示用） */
+  unclassifiedAmount: number;
   categoryBreakdowns: CategoryBreakdown[];
 };
 
@@ -177,10 +179,16 @@ export async function getMonthlySummary(
     });
   }
 
+  // カテゴリ未設定の取引合計（分類済み breakdown との差分。表示側の「未分類」行に使う）
+  let classifiedTotal = 0;
+  for (const b of categoryBreakdowns) classifiedTotal += b.amount;
+  const unclassifiedAmount = totalAmount - classifiedTotal;
+
   return {
     totalAmount,
     budgetAmount,
     remainingAmount: budgetAmount - totalAmount,
+    unclassifiedAmount,
     categoryBreakdowns,
   };
 }

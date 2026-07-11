@@ -232,3 +232,29 @@ describe("getMonthlySummary: 親カテゴリ単位集計と子内訳", () => {
     expect(foodB.paceStatus).not.toBeNull();
   });
 });
+
+describe("getMonthlySummary: 未分類合計", () => {
+  it("カテゴリ未設定の取引合計が unclassifiedAmount になる", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    await db.insert(transactions).values([
+      { amount: 3000, storeName: "a", purchasedAt: jst("2024-01-02T10:00:00+09:00"), categoryId: food.id, source: "manual" },
+      { amount: 5000, storeName: "b", purchasedAt: jst("2024-01-03T10:00:00+09:00"), categoryId: null, source: "email" },
+      { amount: 2000, storeName: "c", purchasedAt: jst("2024-01-04T10:00:00+09:00"), categoryId: null, source: "email" },
+    ]);
+    const r = await getMonthlySummary(db, 2024, 1);
+    expect(r.totalAmount).toBe(10000);
+    expect(r.unclassifiedAmount).toBe(7000);
+  });
+
+  it("全て分類済みなら 0", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    await db.insert(transactions).values({
+      amount: 3000, storeName: "a", purchasedAt: jst("2024-01-02T10:00:00+09:00"), categoryId: food.id, source: "manual",
+    });
+    expect((await getMonthlySummary(db, 2024, 1)).unclassifiedAmount).toBe(0);
+  });
+
+  it("取引ゼロなら 0", async () => {
+    expect((await getMonthlySummary(db, 2024, 1)).unclassifiedAmount).toBe(0);
+  });
+});
