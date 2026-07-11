@@ -116,9 +116,10 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
                       title={`理想ペース: ${idealPacePercent}%`}
                     />
                   </div>
-                  {b.dailyAmount != null && (
+                  {b.remainingAmount != null && (
                     <p className="mt-2 text-xs text-muted-foreground font-mono">
-                      残り ¥{(b.remainingAmount ?? 0).toLocaleString()} · 1日あたり ¥{b.dailyAmount.toLocaleString()}
+                      残り ¥{b.remainingAmount.toLocaleString()}
+                      {b.dailyAmount != null && <> · 1日あたり ¥{b.dailyAmount.toLocaleString()}</>}
                     </p>
                   )}
                   {b.children != null && b.children.length > 0 && (
