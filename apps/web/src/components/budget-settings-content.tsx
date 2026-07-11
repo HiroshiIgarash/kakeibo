@@ -52,7 +52,7 @@ function BudgetRow({ row, month }: { row: BudgetSettingRow; month: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-1 px-4 py-3 rounded-lg border border-border bg-card">
+    <div className="flex flex-col gap-1 px-4 py-3 rounded-lg border border-border bg-card text-card-foreground">
       <div className="flex items-center gap-3">
         <p className="flex-1 min-w-0 text-sm font-medium text-card-foreground truncate">
           {row.categoryName}
