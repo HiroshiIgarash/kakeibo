@@ -75,6 +75,50 @@ describe("parseSmbcEmail", () => {
     expect(r.reason).toBe("parse_error");
     expect(r.error).toContain("利用日");
   });
+
+  describe("JPY表記（円建て海外加盟店）", () => {
+    const jpyPlain = (amountLine: string) =>
+      `◇利用日：2026/06/09 20:32\n◇利用先：GOOGLE*YOUTUBE MEMBER\n◇利用取引：買物\n◇利用金額：${amountLine}\n`;
+
+    it("990.00 JPY は 990円として抽出する", () => {
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain: jpyPlain("990.00 JPY") });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.amount).toBe(990);
+      expect(r.storeName).toBe("GOOGLE*YOUTUBE MEMBER");
+      expect(r.purchasedAt.toISOString()).toBe("2026-06-09T11:32:00.000Z"); // 20:32 JST
+    });
+
+    it("スペース無し（990JPY）も抽出する", () => {
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain: jpyPlain("990JPY") });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.amount).toBe(990);
+    });
+
+    it("カンマ区切り（1,990.00 JPY）は 1990円", () => {
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain: jpyPlain("1,990.00 JPY") });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.amount).toBe(1990);
+    });
+
+    it("小数部が非ゼロ（990.50 JPY）は丸めず parse_error", () => {
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain: jpyPlain("990.50 JPY") });
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.reason).toBe("parse_error");
+      expect(r.error).toContain("利用金額");
+    });
+
+    it("他通貨（9.99 USD）は従来どおり parse_error", () => {
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain: jpyPlain("9.99 USD") });
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.reason).toBe("parse_error");
+      expect(r.error).toContain("利用金額");
+    });
+  });
 });
 
 describe("extractSmbcFields（部分抽出・失敗メールのプリフィル用）", () => {

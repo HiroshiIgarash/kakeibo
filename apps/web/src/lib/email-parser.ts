@@ -10,6 +10,17 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DATE_RE = /(?:ご)?利用日(?:時)?[：:]\s*(\d{4}\/\d{1,2}\/\d{1,2})(?:\s+(\d{1,2}:\d{2}))?/;
 const STORE_RE = /(?:ご)?利用先[：:]\s*(.+)/;
 const AMOUNT_RE = /(?:ご)?利用金額[：:]\s*([\d,]+)\s*円/;
+// 円建て海外加盟店（例: GOOGLE*YOUTUBE MEMBER）は「990.00 JPY」形式で届く。
+const AMOUNT_JPY_RE = /(?:ご)?利用金額[：:]\s*([\d,]+)(?:\.(\d+))?\s*JPY/;
+
+// JPY 表記の金額行にマッチしたら [全体, 整数部] を返す。
+// 小数部が非ゼロ（例: 990.50 JPY）は勝手に丸めず null（抽出失敗 → 手入力へ）。
+function matchJpyAmount(plain: string): [string, string] | null {
+  const m = plain.match(AMOUNT_JPY_RE);
+  if (!m) return null;
+  if (m[2] && Number(m[2]) !== 0) return null;
+  return [m[0], m[1]];
+}
 
 /** 三井住友カード(Vpass)のクレカ利用通知メールをパースする。 */
 export function parseSmbcEmail(input: {
@@ -25,7 +36,7 @@ export function parseSmbcEmail(input: {
 
   const dateMatch = plain.match(DATE_RE);
   const storeMatch = plain.match(STORE_RE);
-  const amountMatch = plain.match(AMOUNT_RE);
+  const amountMatch = plain.match(AMOUNT_RE) ?? matchJpyAmount(plain);
 
   const missing: string[] = [];
   if (!dateMatch) missing.push("利用日");
