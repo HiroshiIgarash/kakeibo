@@ -7,7 +7,7 @@ import {
   storeCategoryMappings,
   transactions,
 } from "@/db/schema";
-import { parseSmbcEmail } from "@/lib/email-parser";
+import { parseSmbcEmailItems } from "@/lib/email-parser";
 import {
   evaluateAlertsForTransaction,
   refreshUnclassifiedAlert,
@@ -78,8 +78,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
   const inboundEmailId = claimed[0].id;
 
-  // 4. パース(対象メール判定はパーサー内部。spec §6.1)
-  const parsed = parseSmbcEmail({ from, subject: subject ?? "", plain });
+  // 4. パース(対象メール判定はパーサー内部。spec §6.1)。
+  //    「ご利用明細のお知らせ」は1通に複数明細があり得るため items で受ける
+  const parsed = parseSmbcEmailItems({ from, subject: subject ?? "", plain });
 
   if (!parsed.ok) {
     if (parsed.reason === "not_target") {
@@ -107,37 +108,40 @@ export async function POST(req: NextRequest): Promise<Response> {
     return ok();
   }
 
-  // 5. 店舗名を NFKC 正規化して store_category_mappings と照合(spec §6.1)
-  const normalizedStore = parsed.storeName.normalize("NFKC");
-  const mapping = await db
-    .select({ categoryId: storeCategoryMappings.categoryId })
-    .from(storeCategoryMappings)
-    .where(eq(storeCategoryMappings.storeName, normalizedStore))
-    .limit(1);
-  const categoryId = mapping[0]?.categoryId ?? null;
-
-  // 6. 取引insert + アラート判定 + inbound_emails更新を単一DBトランザクションで(spec §6 手順6 / §5.5)
+  // 5-6. 全明細を取引化（店名マッピング照合 → insert → アラート判定）+
+  //      inbound_emails更新を単一DBトランザクションで(spec §6 手順6 / §5.5)
   await db.transaction(async (tx) => {
-    const inserted = await tx
-      .insert(transactions)
-      .values({
-        amount: parsed.amount,
-        storeName: parsed.storeName,
-        purchasedAt: parsed.purchasedAt,
-        categoryId,
-        source: "email",
-      })
-      .returning({ id: transactions.id });
-    const transactionId = inserted[0].id;
+    let firstTransactionId: number | null = null;
+    for (const item of parsed.items) {
+      // 店舗名はパーサー側で NFKC 正規化済み。store_category_mappings と照合(spec §6.1)
+      const mapping = await tx
+        .select({ categoryId: storeCategoryMappings.categoryId })
+        .from(storeCategoryMappings)
+        .where(eq(storeCategoryMappings.storeName, item.storeName))
+        .limit(1);
 
-    // 予算アラート・ペースアラート(category が null なら内部で no-op)
-    await evaluateAlertsForTransaction(tx, transactionId);
-    // 未分類アラートの再計算(spec §5.6)
+      const inserted = await tx
+        .insert(transactions)
+        .values({
+          amount: item.amount,
+          storeName: item.storeName,
+          purchasedAt: item.purchasedAt,
+          categoryId: mapping[0]?.categoryId ?? null,
+          source: "email",
+        })
+        .returning({ id: transactions.id });
+      firstTransactionId ??= inserted[0].id;
+
+      // 予算アラート・ペースアラート(category が null なら内部で no-op)
+      await evaluateAlertsForTransaction(tx, inserted[0].id);
+    }
+    // 未分類アラートの再計算(spec §5.6)は全明細の insert 後に1回
     await refreshUnclassifiedAlert(tx);
 
+    // 複数明細の場合は先頭の取引に紐付ける（inbound_emails は取引と1対1のため）
     await tx
       .update(inboundEmails)
-      .set({ status: "processed", transactionId })
+      .set({ status: "processed", transactionId: firstTransactionId })
       .where(eq(inboundEmails.id, inboundEmailId));
   });
 

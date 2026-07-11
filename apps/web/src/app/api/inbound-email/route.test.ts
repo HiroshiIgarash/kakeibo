@@ -189,4 +189,31 @@ describe("POST /api/inbound-email", () => {
     expect(notes[0].notifiableType).toBe("InboundEmail");
     expect(notes[0].notifiableId).toBe(inbound[0].id);
   });
+
+  it("複数明細メール（ご利用明細のお知らせ）は全件を取引化し、email は先頭取引に紐づく", async () => {
+    const plain = [
+      "◇利用日：2025/08/31",
+      "◇利用先：ロケツトナウ",
+      "◇利用取引：返品",
+      "◇利用金額：-1,080円",
+      "",
+      "◇利用日：2025/08/31",
+      "◇利用先：ロケツトナウ",
+      "◇利用取引：買物",
+      "◇利用金額：1,080円",
+    ].join("\n");
+    const res = await callPost(
+      request(payload({ subject: "ご利用明細のお知らせ【三井住友カード】", plain })),
+    );
+    expect(res.status).toBe(200);
+
+    const txRows = await holder.current.select().from(transactions);
+    expect(txRows).toHaveLength(2);
+    expect(txRows.map((t) => t.amount).sort((a, b) => a - b)).toEqual([-1080, 1080]);
+
+    const [email] = await holder.current.select().from(inboundEmails);
+    expect(email.status).toBe("processed");
+    expect(email.transactionId).not.toBeNull();
+    expect(txRows.map((t) => t.id)).toContain(email.transactionId);
+  });
 });

@@ -71,7 +71,7 @@ function parseItemBlock(block: string): ParsedItem | string[] {
   const purchasedAt = new Date(Date.UTC(y, mo - 1, d, hh, mm, 0) - JST_OFFSET_MS);
   // 全角ハイフン・全角英数の表記揺れを吸収するため NFKC 正規化する。
   const storeName = storeMatch![1].trim().normalize("NFKC");
-  return { amount, storeName, purchasedAt };
+  return { amount: amount!, storeName, purchasedAt };
 }
 
 /** 三井住友カード(Vpass)の利用通知/明細通知メールから全明細をパースする。 */
