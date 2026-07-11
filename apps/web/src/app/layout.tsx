@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Mono, Noto_Sans_JP } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
 import "./globals.css";
@@ -21,6 +21,13 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "かけいぼ",
   description: "個人用家計簿アプリ",
+};
+
+// viewport-fit=cover が無いと iOS Safari は env(safe-area-inset-*) を全て 0 にする
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
