@@ -7,6 +7,8 @@ type Props = {
   totalAmount: number;
   budgetAmount: number;
   remainingAmount: number;
+  /** 見出し。過去月ページでは「N月の支出」等を渡す */
+  title?: string;
 };
 
 /**
@@ -15,14 +17,14 @@ type Props = {
  * 予算超過時はバーと残額を赤で強調し、使用率は 100% を超えた実値を示す。
  * 予算未設定（0円）のときは残額・使用率を出さず「予算未設定」とだけ表示する。
  */
-export function SummaryCard({ totalAmount, budgetAmount, remainingAmount }: Props) {
+export function SummaryCard({ totalAmount, budgetAmount, remainingAmount, title = "今月の支出" }: Props) {
   const usage = budgetUsage(totalAmount, budgetAmount);
 
   return (
     <Card className="py-0">
       <CardContent className="p-6">
         <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-          今月の支出
+          {title}
         </p>
         <div className="mt-3 flex items-end gap-2">
           <span className="text-4xl font-bold tracking-tight text-card-foreground font-mono">

@@ -57,6 +57,7 @@ export default async function TransactionsPage(
           totalAmount={monthlySummary.totalAmount}
           budgetAmount={monthlySummary.budgetAmount}
           remainingAmount={monthlySummary.remainingAmount}
+          title={isCurrentMonth ? "今月の支出" : `${month}月の支出`}
         />
 
         <BudgetList
