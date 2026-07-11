@@ -1,6 +1,6 @@
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterAll, afterEach, beforeEach, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb, type TestDatabase } from "../test/db";
+import { createTestDb, resetTestDb } from "../test/db";
 import {
   categories,
   budgets,
@@ -14,12 +14,14 @@ import {
 } from "../db/schema";
 import { evaluateAlertsForTransaction, refreshUnclassifiedAlert } from "./alerts";
 
-let db: TestDatabase;
-let teardown: () => Promise<void>;
+const { db, client, teardown } = await createTestDb();
 
-afterEach(async () => {
+afterEach(() => {
   vi.useRealTimers();
-  await teardown?.();
+});
+
+afterAll(async () => {
+  await teardown();
 });
 
 // 固定「今日」: 2026-07-10（JST）
@@ -55,7 +57,7 @@ const evaluate = (id: number) => db.transaction((tx) => evaluateAlertsForTransac
 describe("evaluateAlertsForTransaction: 予算アラート", () => {
   beforeEach(async () => {
     setToday();
-    ({ db, teardown } = await createTestDb());
+    await resetTestDb(client);
   });
 
   it("明示行が無い月でも直近月の予算を引き継いでアラート判定する", async () => {
@@ -177,7 +179,7 @@ describe("evaluateAlertsForTransaction: 予算アラート", () => {
 describe("evaluateAlertsForTransaction: ペースアラート", () => {
   beforeEach(async () => {
     setToday();
-    ({ db, teardown } = await createTestDb());
+    await resetTestDb(client);
   });
 
   async function setup(paceOpts?: { activeFromDay?: number; isActive?: boolean }) {
@@ -282,7 +284,7 @@ describe("evaluateAlertsForTransaction: ペースアラート", () => {
 describe("refreshUnclassifiedAlert", () => {
   beforeEach(async () => {
     setToday();
-    ({ db, teardown } = await createTestDb());
+    await resetTestDb(client);
   });
   const refresh = () => db.transaction((tx) => refreshUnclassifiedAlert(tx));
 

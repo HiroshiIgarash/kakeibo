@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   categories,
   inboundEmails,
@@ -8,7 +8,7 @@ import {
   transactions,
   unclassifiedAlerts,
 } from "@/db/schema";
-import { createTestDb } from "@/test/db";
+import { createTestDb, resetTestDb } from "@/test/db";
 
 // `@/db/client` の `db` を pglite テストDBに差し替える。getter 経由で毎アクセス時に
 // 現在のテストDBを返すことで、テストごとに新しいDBへ向けられるようにする。
@@ -20,6 +20,9 @@ vi.mock("@/db/client", () => ({
     return holder.current;
   },
 }));
+
+const { db: testDb, client, teardown } = await createTestDb();
+holder.current = testDb;
 
 // CloudMailin `plain` は charset デコード済みUTF-8。以下は fixtures/*.eml（ISO-2022-JP）を
 // CloudMailin がデコードした後に相当する本文（抽出に必要な行のみ）。
@@ -78,18 +81,17 @@ async function callPost(req: NextRequest) {
   return POST(req);
 }
 
-let teardown: () => Promise<void>;
-
 beforeEach(async () => {
-  const t = await createTestDb();
-  holder.current = t.db;
-  teardown = t.teardown;
+  await resetTestDb(client);
   process.env.INBOUND_TOKEN = TOKEN;
 });
 
-afterEach(async () => {
-  await teardown();
+afterEach(() => {
   vi.resetModules();
+});
+
+afterAll(async () => {
+  await teardown();
 });
 
 describe("POST /api/inbound-email", () => {

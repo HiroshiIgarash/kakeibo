@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createTestDb, type TestDatabase } from "@/test/db";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { createTestDb, resetTestDb } from "@/test/db";
 import { categories, transactions, storeCategoryMappings, budgets } from "@/db/schema";
 import {
   loadRecentTransactions,
@@ -12,14 +12,13 @@ import {
   loadUnclassifiedGroups,
 } from "./queries";
 
-let db: TestDatabase;
-let teardown: () => Promise<void>;
+const { db, client, teardown } = await createTestDb();
 
 beforeEach(async () => {
-  ({ db, teardown } = await createTestDb());
+  await resetTestDb(client);
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await teardown();
 });
 

@@ -1,19 +1,16 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb, type TestDatabase } from "./db";
+import { createTestDb } from "./db";
 import { categories, transactions } from "../db/schema";
 
-let db: TestDatabase;
-let teardown: () => Promise<void>;
+const { db, teardown } = await createTestDb();
 
-afterEach(async () => {
-  await teardown?.();
+afterAll(async () => {
+  await teardown();
 });
 
 describe("schema smoke", () => {
   it("マイグレーション適用後にカテゴリと取引を insert できる", async () => {
-    ({ db, teardown } = await createTestDb());
-
     const [cat] = await db
       .insert(categories)
       .values({ name: "食費", kind: "variable" })

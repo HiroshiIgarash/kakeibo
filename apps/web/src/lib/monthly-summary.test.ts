@@ -1,22 +1,26 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { createTestDb, type TestDatabase } from "../test/db";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { createTestDb, resetTestDb } from "../test/db";
 import { categories, budgets, transactions } from "../db/schema";
 import { getMonthlySummary } from "./monthly-summary";
 
-let db: TestDatabase;
-let teardown: () => Promise<void>;
+const { db, client, teardown } = await createTestDb();
 
-afterEach(async () => {
+beforeEach(async () => {
+  await resetTestDb(client);
+});
+
+afterEach(() => {
   vi.useRealTimers();
-  await teardown?.();
+});
+
+afterAll(async () => {
+  await teardown();
 });
 
 const jst = (iso: string) => new Date(iso);
 
 describe("getMonthlySummary", () => {
   it("2024年1月の合計・予算・残額・内訳を返す", async () => {
-    ({ db, teardown } = await createTestDb());
-
     const [food] = await db
       .insert(categories)
       .values({ name: "食費", kind: "variable" })
@@ -59,7 +63,6 @@ describe("getMonthlySummary", () => {
   });
 
   it("取引ゼロなら合計0・内訳空", async () => {
-    ({ db, teardown } = await createTestDb());
     const r = await getMonthlySummary(db, 2024, 1);
     expect(r.totalAmount).toBe(0);
     expect(r.budgetAmount).toBe(0);
@@ -70,7 +73,6 @@ describe("getMonthlySummary", () => {
 
 describe("getMonthlySummary: 予算の引き継ぎ（有効予算）", () => {
   it("明示行が無い月でも直近月の予算が budgetAmount に反映される", async () => {
-    ({ db, teardown } = await createTestDb());
     const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
     // 予算は2023年11月にのみ設定
     await db.insert(budgets).values({ categoryId: food.id, month: "2023-11-01", amount: 40000 });
@@ -84,7 +86,6 @@ describe("getMonthlySummary: 予算の引き継ぎ（有効予算）", () => {
   });
 
   it("引き継ぎ元より後の月で明示変更すると、その月以降は新しい額になる", async () => {
-    ({ db, teardown } = await createTestDb());
     const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
     await db.insert(budgets).values([
       { categoryId: food.id, month: "2023-11-01", amount: 40000 },
@@ -98,8 +99,6 @@ describe("getMonthlySummary: 予算の引き継ぎ（有効予算）", () => {
 
 describe("getMonthlySummary: 親カテゴリ単位集計と子内訳", () => {
   it("子カテゴリの取引は親単位で集計され、子内訳が金額降順で付く", async () => {
-    ({ db, teardown } = await createTestDb());
-
     const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
     const [snack] = await db
       .insert(categories)
@@ -138,7 +137,6 @@ describe("getMonthlySummary: 親カテゴリ単位集計と子内訳", () => {
   });
 
   it("親カテゴリへの直付け取引は children に含めず親行の amount にのみ計上する", async () => {
-    ({ db, teardown } = await createTestDb());
     const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
     const [snack] = await db
       .insert(categories)
@@ -158,7 +156,6 @@ describe("getMonthlySummary: 親カテゴリ単位集計と子内訳", () => {
 
   it("親の有効予算に対して子取引合算でペース計算される", async () => {
     vi.setSystemTime(new Date("2026-07-10T03:00:00+09:00"));
-    ({ db, teardown } = await createTestDb());
     const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
     const [snack] = await db
       .insert(categories)
