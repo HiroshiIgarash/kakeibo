@@ -9,7 +9,7 @@ const { db: testDb, teardown } = await createTestDb();
 vi.mock("@/db/client", () => ({ db: testDb }));
 
 const { categories, transactions, budgetAlerts } = await import("@/db/schema");
-const { createCategory, updateCategory, deleteCategory } = await import("./categories");
+const { createCategory, updateCategory, deleteCategory, createCategoryWithParent } = await import("./categories");
 
 afterAll(async () => {
   await teardown();
@@ -151,6 +151,62 @@ describe("deleteCategory", () => {
   it("存在しないIDはエラーを返す", async () => {
     const res = await deleteCategory({ id: "999999" });
     expect(res.errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe("createCategoryWithParent", () => {
+  it("親と子を一括作成し、子のidを文字列で返す", async () => {
+    const res = await createCategoryWithParent({
+      parentName: "食費",
+      kind: "variable",
+      color: "#3b82f6",
+      childName: "外食",
+    });
+    expect(res.errors).toEqual([]);
+    const rows = await testDb.select().from(categories);
+    expect(rows).toHaveLength(2);
+    const parent = rows.find((r) => r.parentId === null)!;
+    const child = rows.find((r) => r.parentId === parent.id)!;
+    expect(parent).toMatchObject({ name: "食費", kind: "variable", color: "#3b82f6" });
+    expect(child).toMatchObject({ name: "外食", kind: "variable", color: null });
+    expect(res.id).toBe(String(child.id));
+  });
+
+  it("kind 'fixed' は子にも継承される", async () => {
+    const res = await createCategoryWithParent({ parentName: "住居", kind: "fixed", childName: "家賃" });
+    expect(res.errors).toEqual([]);
+    const rows = await testDb.select().from(categories);
+    expect(rows.map((r) => r.kind)).toEqual(["fixed", "fixed"]);
+  });
+
+  it("color 未指定なら親の color は null", async () => {
+    const res = await createCategoryWithParent({ parentName: "食費", kind: "variable", childName: "外食" });
+    expect(res.errors).toEqual([]);
+    const rows = await testDb.select().from(categories);
+    const parent = rows.find((r) => r.parentId === null)!;
+    expect(parent.color).toBeNull();
+  });
+
+  it("親名空欄は拒否・DB変更なし", async () => {
+    const res = await createCategoryWithParent({ parentName: "  ", kind: "variable", childName: "外食" });
+    expect(res.errors.length).toBeGreaterThan(0);
+    expect(await testDb.select().from(categories)).toHaveLength(0);
+  });
+
+  it("子名空欄は拒否・DB変更なし", async () => {
+    const res = await createCategoryWithParent({ parentName: "食費", kind: "variable", childName: "  " });
+    expect(res.errors.length).toBeGreaterThan(0);
+    expect(await testDb.select().from(categories)).toHaveLength(0);
+  });
+
+  it("不正な kind は拒否・DB変更なし", async () => {
+    const res = await createCategoryWithParent({
+      parentName: "食費",
+      kind: "weekly" as never,
+      childName: "外食",
+    });
+    expect(res.errors.length).toBeGreaterThan(0);
+    expect(await testDb.select().from(categories)).toHaveLength(0);
   });
 });
 

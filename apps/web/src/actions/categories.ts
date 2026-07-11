@@ -30,6 +30,12 @@ const createSchema = z.object({
     .transform((v) => (v == null || v === "" ? null : Number(v)))
     .refine((v) => v == null || Number.isInteger(v), "親カテゴリIDが不正です"),
 });
+const createWithParentSchema = z.object({
+  parentName: z.string().trim().min(1, "親カテゴリ名を入力してください"),
+  kind: kindEnum,
+  color: z.union([z.string(), z.null()]).optional(),
+  childName: z.string().trim().min(1, "カテゴリ名を入力してください"),
+});
 const updateSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1, "カテゴリ名を入力してください"),
@@ -72,6 +78,35 @@ export async function createCategory(input: {
   revalidatePath("/settings/categories");
   revalidatePath("/");
   return { errors: [], id: String(created.id) };
+}
+
+// TOP 未分類パネル用: 親＋子を単一トランザクションで一括作成し、子の id を返す。
+// createCategory を2回呼ぶ方式にしない（子の作成失敗時に孤児親を残さないため）。
+export async function createCategoryWithParent(input: {
+  parentName: string;
+  kind: "fixed" | "variable";
+  color?: string | null;
+  childName: string;
+}): Promise<ActionResult & { id?: string }> {
+  const parsed = createWithParentSchema.safeParse(input);
+  if (!parsed.success) return { errors: parsed.error.issues.map((i) => i.message) };
+  const { parentName, kind, color, childName } = parsed.data;
+
+  const childId = await db.transaction(async (tx) => {
+    const [parent] = await tx
+      .insert(categories)
+      .values({ name: parentName, kind, color: color ?? null, parentId: null })
+      .returning({ id: categories.id });
+    const [child] = await tx
+      .insert(categories)
+      .values({ name: childName, kind, color: null, parentId: parent.id })
+      .returning({ id: categories.id });
+    return child.id;
+  });
+
+  revalidatePath("/settings/categories");
+  revalidatePath("/");
+  return { errors: [], id: String(childId) };
 }
 
 export async function updateCategory(input: {
