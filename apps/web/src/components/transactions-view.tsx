@@ -46,6 +46,11 @@ export function TransactionsView({ transactions }: Props) {
     setSheetOpen(true);
   };
 
+  const handleAddClick = () => {
+    setEditingTransaction(null);
+    setSheetOpen(true);
+  };
+
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -59,6 +64,7 @@ export function TransactionsView({ transactions }: Props) {
         <TransactionList
           transactions={filtered}
           onTransactionTap={handleTransactionTap}
+          onAddClick={handleAddClick}
         />
       </div>
 

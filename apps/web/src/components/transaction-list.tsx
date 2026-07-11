@@ -21,6 +21,7 @@ type Transaction = {
 type Props = {
   transactions: Transaction[];
   onTransactionTap?: (transaction: Transaction) => void;
+  onAddClick?: () => void;
 };
 
 /**
@@ -42,16 +43,27 @@ function parseDateLabel(dateStr: string): { label: string; sortKey: string } {
 /**
  * 支出一覧。purchasedAt の降順で日付グループに分けて表示する。
  */
-export function TransactionList({ transactions, onTransactionTap }: Props) {
+export function TransactionList({ transactions, onTransactionTap, onAddClick }: Props) {
   if (transactions.length === 0) {
     return (
       <div>
         <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase mb-3">
           支出一覧
         </h2>
-        <p className="text-sm text-muted-foreground text-center py-8">
-          この月の支出はありません
-        </p>
+        <div className="flex flex-col items-center gap-3 py-8">
+          <p className="text-sm text-muted-foreground text-center">
+            この月の支出はありません
+          </p>
+          {onAddClick && (
+            <button
+              type="button"
+              onClick={onAddClick}
+              className="px-4 py-3 rounded-xl border border-border text-sm text-foreground hover:bg-muted transition-colors"
+            >
+              支出を追加
+            </button>
+          )}
+        </div>
       </div>
     );
   }
