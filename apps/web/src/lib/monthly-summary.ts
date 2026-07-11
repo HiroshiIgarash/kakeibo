@@ -105,6 +105,19 @@ export async function getMonthlySummary(
     agg.children.sort((a, b) => b.amount - a.amount);
   }
 
+  // 予算設定済みだが対象月に取引が無いカテゴリも、進捗0%のカードとして表示対象に含める
+  // （集計は transactions INNER JOIN 由来のため、ここで補完しないと月初にカードが消える）
+  const zeroSpendBudgetIds = [...effectiveBudgets.keys()].filter((id) => !parentAggs.has(id));
+  if (zeroSpendBudgetIds.length > 0) {
+    const rows = await db
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .where(inArray(categories.id, zeroSpendBudgetIds));
+    for (const r of rows) {
+      parentAggs.set(r.id, { categoryId: r.id, categoryName: r.name, amount: 0, children: [] });
+    }
+  }
+
   // 過去月はペース計算が無意味なため pace_date = null（当月のみ当日を使う）
   const now = jstToday();
   const nowParts = jstDateParts(now);

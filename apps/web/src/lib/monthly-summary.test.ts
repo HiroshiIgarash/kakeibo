@@ -171,6 +171,43 @@ describe("getMonthlySummary: 親カテゴリ単位集計と子内訳", () => {
     expect(foodB.dailyAmount).toBeNull();
   });
 
+  it("予算設定済みで支出ゼロのカテゴリも breakdown に含まれる（過去月）", async () => {
+    const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
+    const [fun] = await db.insert(categories).values({ name: "娯楽", kind: "variable" }).returning();
+    await db.insert(budgets).values([
+      { categoryId: food.id, month: "2024-01-01", amount: 30_000 },
+      { categoryId: fun.id, month: "2024-01-01", amount: 10_000 },
+    ]);
+    // 取引は食費のみ。娯楽は支出ゼロ
+    await db.insert(transactions).values({
+      amount: 5000, storeName: "a", purchasedAt: jst("2024-01-10T10:00:00+09:00"), categoryId: food.id, source: "manual",
+    });
+
+    const r = await getMonthlySummary(db, 2024, 1);
+    expect(r.categoryBreakdowns).toHaveLength(2);
+    const funB = r.categoryBreakdowns.find((b) => b.categoryName === "娯楽")!;
+    expect(funB.amount).toBe(0);
+    expect(funB.percentage).toBe(0);
+    expect(funB.budgetAmount).toBe(10_000);
+    expect(funB.remainingAmount).toBe(10_000);
+    expect(funB.paceStatus).toBeNull();
+    expect(funB.dailyAmount).toBeNull();
+    expect(funB.children).toEqual([]);
+  });
+
+  it("予算設定済みで支出ゼロのカテゴリは当月ならペース情報も付く", async () => {
+    vi.setSystemTime(new Date("2026-07-10T03:00:00+09:00"));
+    const [fun] = await db.insert(categories).values({ name: "娯楽", kind: "variable" }).returning();
+    await db.insert(budgets).values({ categoryId: fun.id, month: "2026-07-01", amount: 10_000 });
+
+    const r = await getMonthlySummary(db, 2026, 7);
+    const funB = r.categoryBreakdowns.find((b) => b.categoryName === "娯楽")!;
+    expect(funB.amount).toBe(0);
+    expect(funB.budgetAmount).toBe(10_000);
+    expect(funB.paceStatus).not.toBeNull();
+    expect(funB.dailyAmount).not.toBeNull();
+  });
+
   it("親の有効予算に対して子取引合算でペース計算される", async () => {
     vi.setSystemTime(new Date("2026-07-10T03:00:00+09:00"));
     const [food] = await db.insert(categories).values({ name: "食費", kind: "variable" }).returning();
