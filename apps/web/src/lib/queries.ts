@@ -56,6 +56,7 @@ export type MonthlySummaryView = {
   totalAmount: number;
   budgetAmount: number;
   remainingAmount: number;
+  unclassifiedAmount: number;
   categoryBreakdowns: Array<{
     categoryId: string;
     categoryName: string;
@@ -159,6 +160,7 @@ export async function loadMonthlySummaryView(
   return {
     totalAmount: s.totalAmount,
     budgetAmount: s.budgetAmount,
+    unclassifiedAmount: s.unclassifiedAmount,
     remainingAmount: s.remainingAmount,
     categoryBreakdowns: s.categoryBreakdowns.map((b) => ({
       categoryId: String(b.categoryId),

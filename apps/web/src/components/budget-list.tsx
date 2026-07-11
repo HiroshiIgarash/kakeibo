@@ -29,6 +29,8 @@ type Props = {
   breakdowns: CategoryBreakdown[];
   /** 今月の経過率（0〜100）。理想ペースラインの縦線位置に使用する */
   idealPacePercent: number;
+  /** カテゴリ未設定の取引合計。0 より大きいときのみ「未分類」行を表示する */
+  unclassifiedAmount: number;
 };
 
 const paceConfig: Record<PaceStatus, { label: string; className: string }> = {
@@ -44,21 +46,25 @@ const paceIndicatorClass: Record<PaceStatus, string> = {
 };
 
 /**
- * カテゴリ別予算カード一覧。
- * 予算未設定の子カテゴリ（外食・自炊など）は表示しない。
+ * カテゴリ別の支出一覧。
+ * 予算ありカテゴリはカード（バー・バッジ付き）、予算なしカテゴリは軽量な行で表示し、
+ * 末尾にカテゴリ未設定の「未分類」合計を出す（セクション合計 = 月の総支出になる）。
  * paceStatus（GREEN/YELLOW/RED）に応じてバッジとプログレスバーを色分けする。
  */
-export function BudgetList({ breakdowns, idealPacePercent }: Props) {
+export function BudgetList({ breakdowns, idealPacePercent, unclassifiedAmount }: Props) {
   // type predicate で絞り込むことで、以降の budgetAmount は number 型として扱える
-  const parentBreakdowns = breakdowns.filter(
+  const budgeted = breakdowns.filter(
     (b): b is CategoryBreakdown & { budgetAmount: number } => b.budgetAmount != null
   );
+  const unbudgeted = breakdowns
+    .filter((b) => b.budgetAmount == null && b.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
 
-  if (parentBreakdowns.length === 0) {
+  if (budgeted.length === 0 && unbudgeted.length === 0 && unclassifiedAmount <= 0) {
     return (
       <div>
         <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase mb-3">
-          カテゴリ別予算
+          カテゴリ別
         </h2>
         <p className="text-sm text-muted-foreground">
           カテゴリ別の予算が未設定です。
@@ -74,10 +80,10 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
   return (
     <div>
       <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase mb-3">
-        カテゴリ別予算
+        カテゴリ別
       </h2>
       <ul role="list" className="flex flex-col gap-3">
-        {parentBreakdowns.map((b) => {
+        {budgeted.map((b) => {
           const usage = budgetUsage(b.amount, b.budgetAmount);
           const pace = b.paceStatus ? paceConfig[b.paceStatus] : null;
           const indicatorClass = b.paceStatus ? paceIndicatorClass[b.paceStatus] : undefined;
@@ -144,6 +150,47 @@ export function BudgetList({ breakdowns, idealPacePercent }: Props) {
           );
         })}
       </ul>
+
+      {unbudgeted.length > 0 && (
+        <ul role="list" className="flex flex-col gap-2 mt-3">
+          {unbudgeted.map((b) => (
+            <li key={b.categoryId} className="list-none">
+              <div className="px-4 py-3 rounded-lg border border-border bg-card text-card-foreground">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{b.categoryName}</span>
+                  <span className="text-sm font-mono">
+                    ¥{b.amount.toLocaleString()}
+                    <span className="ml-2 text-xs text-muted-foreground">予算未設定</span>
+                  </span>
+                </div>
+                {b.children != null && b.children.length > 0 && (
+                  <details className="mt-1 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer select-none">内訳</summary>
+                    <ul role="list" className="mt-1 flex flex-col gap-1">
+                      {b.children.map((child) => (
+                        <li
+                          key={child.categoryId}
+                          className="list-none flex items-center justify-between"
+                        >
+                          <span>{child.categoryName}</span>
+                          <span className="font-mono">¥{child.amount.toLocaleString()}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {unclassifiedAmount > 0 && (
+        <div className="mt-2 px-4 py-3 rounded-lg border border-dashed border-border text-muted-foreground flex items-center justify-between">
+          <span className="text-sm">未分類</span>
+          <span className="text-sm font-mono">¥{unclassifiedAmount.toLocaleString()}</span>
+        </div>
+      )}
     </div>
   );
 }

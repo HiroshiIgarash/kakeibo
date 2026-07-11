@@ -63,6 +63,7 @@ export default async function TransactionsPage(
         <BudgetList
           breakdowns={monthlySummary.categoryBreakdowns}
           idealPacePercent={idealPacePercent}
+          unclassifiedAmount={monthlySummary.unclassifiedAmount}
         />
 
         <div className="border-t border-border pt-2">

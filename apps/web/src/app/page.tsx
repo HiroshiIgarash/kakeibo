@@ -68,7 +68,7 @@ export default async function Home() {
           parentOptions={parentCategoryOptions}
         />
         <FailedEmailResolve emails={failedEmails} />
-        <BudgetList breakdowns={monthlySummary.categoryBreakdowns} idealPacePercent={idealPacePercent} />
+        <BudgetList breakdowns={monthlySummary.categoryBreakdowns} idealPacePercent={idealPacePercent} unclassifiedAmount={monthlySummary.unclassifiedAmount} />
         <RecentTransactions transactions={transactions} />
       </div>
     </main>
