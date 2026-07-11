@@ -119,6 +119,87 @@ describe("parseSmbcEmail", () => {
       expect(r.error).toContain("利用金額");
     });
   });
+
+  describe("取消・返品（マイナス金額）", () => {
+    it("取消メール（-1,080円）は負の金額で抽出する", () => {
+      const plain =
+        "◇利用日：2025/08/31 10:28\n◇利用先：ROCKET NOW\n◇利用取引：取消\n◇利用金額：-1,080円\n";
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.amount).toBe(-1080);
+      expect(r.storeName).toBe("ROCKET NOW");
+    });
+
+    it("JPY のマイナス（-990.00 JPY）も負の金額で抽出する", () => {
+      const plain =
+        "◇利用日：2026/06/09 20:32\n◇利用先：GOOGLE*YOUTUBE MEMBER\n◇利用取引：返品\n◇利用金額：-990.00 JPY\n";
+      const r = parseSmbcEmail({ from: FROM, subject: SUBJECT, plain });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.amount).toBe(-990);
+    });
+  });
+});
+
+describe("parseSmbcEmailItems（複数明細・ご利用明細のお知らせ）", () => {
+  const MEISAI_SUBJECT = "ご利用明細のお知らせ【三井住友カード】";
+
+  it("件名「ご利用明細のお知らせ」を対象とし、時刻なし利用日を抽出する", async () => {
+    const { parseSmbcEmailItems } = await import("./email-parser");
+    const plain = "◇利用日：2025/10/03\n◇利用先：Ａｍａｚｏｎプライム会費\n◇利用取引：返品\n◇利用金額：-264円\n";
+    const r = parseSmbcEmailItems({ from: FROM, subject: MEISAI_SUBJECT, plain });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0].amount).toBe(-264);
+    expect(r.items[0].storeName).toBe("Amazonプライム会費"); // NFKC 正規化
+    expect(r.items[0].purchasedAt.toISOString()).toBe("2025-10-02T15:00:00.000Z"); // 10/03 00:00 JST
+  });
+
+  it("複数ブロック（返品と買物の相殺ペア）を全件抽出する", async () => {
+    const { parseSmbcEmailItems } = await import("./email-parser");
+    const plain = [
+      "◇利用日：2025/08/31",
+      "◇利用先：ロケツトナウ",
+      "◇利用取引：返品",
+      "◇利用金額：-1,080円",
+      "",
+      "◇利用日：2025/08/31",
+      "◇利用先：ロケツトナウ",
+      "◇利用取引：買物",
+      "◇利用金額：1,080円",
+      "",
+    ].join("\n");
+    const r = parseSmbcEmailItems({ from: FROM, subject: MEISAI_SUBJECT, plain });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.items.map((i) => i.amount)).toEqual([-1080, 1080]);
+  });
+
+  it("1ブロックでも欠損があれば全体を parse_error にする", async () => {
+    const { parseSmbcEmailItems } = await import("./email-parser");
+    const plain = [
+      "◇利用日：2025/08/31",
+      "◇利用先：ロケツトナウ",
+      "◇利用金額：-1,080円",
+      "",
+      "◇利用日：2025/08/31",
+      "◇利用先：ロケツトナウ",
+      "",
+    ].join("\n");
+    const r = parseSmbcEmailItems({ from: FROM, subject: MEISAI_SUBJECT, plain });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.reason).toBe("parse_error");
+    expect(r.error).toContain("利用金額");
+  });
+
+  it("対象外件名は not_target のまま", async () => {
+    const { parseSmbcEmailItems } = await import("./email-parser");
+    const r = parseSmbcEmailItems({ from: FROM, subject: "転送確認メール", plain: "◇利用金額：100円" });
+    expect(r).toEqual({ ok: false, reason: "not_target" });
+  });
 });
 
 describe("extractSmbcFields（部分抽出・失敗メールのプリフィル用）", () => {
