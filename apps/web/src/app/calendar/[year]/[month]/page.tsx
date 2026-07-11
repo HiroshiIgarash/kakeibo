@@ -8,15 +8,6 @@ import { CalendarPageContent } from "@/components/calendar-page-content";
 // DB を参照する RSC のため、build 時の静的評価を避けて常にリクエスト時に描画する
 export const dynamic = "force-dynamic";
 
-type Transaction = {
-  id: string;
-  amount: number;
-  storeName: string;
-  purchasedAt: string;
-  memo?: string | null;
-  category?: { id: string; name: string; color?: string | null } | null;
-};
-
 export default async function CalendarPage(
   props: PageProps<"/calendar/[year]/[month]">
 ) {
