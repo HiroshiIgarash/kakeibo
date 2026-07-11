@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Props = {
@@ -19,13 +22,18 @@ export function MonthNavigator({ year, month, basePath = "transactions" }: Props
   const prev = prevMonth(year, month);
   const next = nextMonth(year, month);
 
+  // カテゴリフィルタ等のクエリを月移動後も引き継ぐ
+  const searchParams = useSearchParams();
+  const qs = searchParams.toString();
+  const suffix = qs ? `?${qs}` : "";
+
   const now = new Date();
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
   return (
     <div className="flex items-center justify-between">
       <Link
-        href={`/${basePath}/${prev.year}/${prev.month}`}
+        href={`/${basePath}/${prev.year}/${prev.month}${suffix}`}
         className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -40,7 +48,7 @@ export function MonthNavigator({ year, month, basePath = "transactions" }: Props
         <div className="w-[72px]" />
       ) : (
         <Link
-          href={`/${basePath}/${next.year}/${next.month}`}
+          href={`/${basePath}/${next.year}/${next.month}${suffix}`}
           className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           {next.month}月
