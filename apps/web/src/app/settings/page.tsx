@@ -9,7 +9,14 @@ type SettingsSection = {
   href?: string;
 };
 
+// 依存関係順（予算・アラート・マッピングはカテゴリの登録が前提）
 const SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    label: "カテゴリ管理",
+    icon: Tag,
+    description: "カテゴリの追加・編集・削除",
+    href: "/settings/categories",
+  },
   {
     label: "予算設定",
     icon: Wallet,
@@ -21,12 +28,6 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     icon: Bell,
     description: "予算・ペースアラートのしきい値を設定",
     href: "/settings/alerts",
-  },
-  {
-    label: "カテゴリ管理",
-    icon: Tag,
-    description: "カテゴリの追加・編集・削除",
-    href: "/settings/categories",
   },
   {
     label: "マッピング管理",
