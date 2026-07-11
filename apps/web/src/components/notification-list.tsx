@@ -1,7 +1,7 @@
 import { CircleAlert, Tag, TrendingUp, MailWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { NotificationView, Notifiable } from "@/lib/notifications";
+import type { NotificationView } from "@/lib/notifications";
 
 /**
  * 未読通知リスト。
