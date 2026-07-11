@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 //   画面全体を自動ズームするため、16px 以上を必須とする
 // - bg-transparent: このアプリのテーマは「暗いページ面 + ほぼ白のカード」の反転構成。
 //   bg-background をカード内で使うと黒地に黒文字になるため、面の色を透過で継承する
+// - py-2.5: 高さ約44pxを確保する（Apple HIG のタップ領域推奨）
 export const inputBaseClass =
-  "rounded-md border border-input bg-transparent px-3 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50";
+  "rounded-md border border-input bg-transparent px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50";
 
 function Input({ className, ...props }: React.ComponentProps<"input">) {
   return <input className={cn("w-full", inputBaseClass, className)} {...props} />;

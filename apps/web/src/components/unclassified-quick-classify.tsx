@@ -92,14 +92,14 @@ function CategoryPicker({
           <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
             {parentName}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {children.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 disabled={busy}
                 onClick={() => onPick(c.id)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-3 py-1.5 text-xs hover:bg-muted transition-colors disabled:opacity-50"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-transparent px-3.5 text-xs hover:bg-muted transition-colors disabled:opacity-50"
               >
                 <span
                   className="w-2 h-2 rounded-full"
