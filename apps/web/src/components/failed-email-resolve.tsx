@@ -19,6 +19,7 @@ function FailedRow({ email, open, onToggle }: { email: FailedInboundEmailView; o
   const [date, setDate] = useState(email.date ?? email.receivedAt);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmIgnore, setConfirmIgnore] = useState(false);
 
   async function handleResolve() {
     const n = Number(amount);
@@ -103,14 +104,42 @@ function FailedRow({ email, open, onToggle }: { email: FailedInboundEmailView; o
             />
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={handleIgnore}>
-              無視
-            </Button>
-            <Button type="button" size="sm" disabled={busy} onClick={handleResolve}>
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "登録"}
-            </Button>
-          </div>
+          {confirmIgnore ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-muted-foreground">
+                このメールを無視しますか？取引としては登録されません。
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => setConfirmIgnore(false)}
+                >
+                  キャンセル
+                </Button>
+                <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={handleIgnore}>
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "無視する"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => setConfirmIgnore(true)}
+              >
+                無視
+              </Button>
+              <Button type="button" size="sm" disabled={busy} onClick={handleResolve}>
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "登録"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
