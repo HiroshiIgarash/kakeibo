@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { PRESET_COLORS } from "@/lib/category-colors";
 
 // ────────────────────────────────────────────────────────────────
 // 定数
@@ -17,12 +18,6 @@ import { Input } from "@/components/ui/input";
 const CATEGORY_TYPES: { value: "fixed" | "variable"; label: string }[] = [
   { value: "fixed", label: "固定費" },
   { value: "variable", label: "変動費" },
-];
-
-const PRESET_COLORS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e",
-  "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
-  "#6b7280", "#84cc16",
 ];
 
 // ────────────────────────────────────────────────────────────────
